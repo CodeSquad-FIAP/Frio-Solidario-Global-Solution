@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FrioSolidario.Api/FrioSolidario.Api.csproj" />
+    <Project Path="src/FrioSolidario.Application/FrioSolidario.Application.csproj" />
+    <Project Path="src/FrioSolidario.Domain/FrioSolidario.Domain.csproj" />
+    <Project Path="src/FrioSolidario.Infrastructure/FrioSolidario.Infrastructure.csproj" />
+  </Folder>
+</Solution>
