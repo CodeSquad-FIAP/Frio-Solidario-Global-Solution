@@ -127,6 +127,98 @@ Os enums trafegam como texto (`CAMARA`, `MERCADO`, `ABERTO`), nunca como número
 `ProblemDetails`: 400 regra de negócio/validação, 401 credenciais ou token inválido, 403 equipamento
 de outra instituição, 404 não encontrado, 409 conflito com o estado do banco.
 
+## Contrato para o app (Kevin)
+
+Ordem que o app segue, com o corpo real de cada resposta (medido rodando a API):
+
+1. `POST /api/auth/login` → guarda `token` e `expiraEm`. Em todo request seguinte:
+   `Authorization: Bearer <token>`.
+2. `GET /api/equipamentos?instituicaoId=1` → lista com `nome`, `tipo`, `tempMin`, `tempMax`, `umidMax`.
+3. `GET /api/equipamentos/{id}/leituras?periodo=24h` → série pronta para o gráfico, **já em ordem
+   cronológica** (a mais antiga primeiro):
+
+```json
+[{"id":5,"equipamentoId":1,"temperatura":7.6,"umidade":75.0,"portaAberta":false,
+  "registradaEm":"2026-11-10T23:30:00+00:00","origem":"SENSOR"}]
+```
+
+4. `GET /api/alertas?status=ABERTO` → fila já ordenada por severidade (`CRITICA`, `ALTA`, `MEDIA`,
+   `BAIXA`) e, dentro da mesma severidade, do mais recente para o mais antigo:
+
+```json
+[{"id":6,"equipamentoId":6,"equipamento":"Câmara de resfriamento","leituraId":36,
+  "tipo":"TEMP_ALTA","severidade":"CRITICA","status":"ABERTO",
+  "criadoEm":"2026-11-10T23:30:00+00:00","resolvidoEm":null,"resolvidoPorId":null}]
+```
+
+5. `PATCH /api/alertas/{id}/resolver` (sem corpo) → devolve o alerta com `status: "RESOLVIDO"`,
+   `resolvidoEm` e `resolvidoPorId`. Repetir a chamada devolve 409.
+6. `GET /api/equipamentos/{id}/relatorio?de=2026-11-01&ate=2026-11-10` → **corpo é o PDF**
+   (`Content-Type: application/pdf`, nome do arquivo em `Content-Disposition`). Salve os bytes em cache e
+   abra com a folha de compartilhamento/impressão do Android. `de`/`ate` são opcionais (padrão: últimos
+   7 dias, fim inclusivo no dia).
+
+Detalhes que evitam retrabalho no app: enums trafegam em texto (`CAMARA`, `TEMP_ALTA`, `ABERTO`); datas
+vêm em ISO 8601 **UTC** (`+00:00`) e precisam ser convertidas para o fuso do aparelho na exibição; 401
+significa token vencido (8 h) — volte para o login; 403 significa equipamento de outra instituição.
+
+## Contrato para o sensor (Roger)
+
+O sensor publica exatamente como o app, com o mesmo token:
+
+```bash
+# 1. token (vale 8 horas; guarde e renove)
+curl -s -X POST http://localhost:5199/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"rafael.nunes@bairrosolidario.example","senha":"Frio@2026"}'
+
+# 2. leitura (201 se gravou)
+curl -s -X POST http://localhost:5199/api/leituras \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+  -d '{"equipamentoId":3,"temperatura":8.4,"umidade":72.0,"portaAberta":false,"origem":"SENSOR"}'
+```
+
+| Campo | Obrigatório | Regra |
+|---|---|---|
+| `equipamentoId` | sim | precisa ser de uma instituição do token (senão 403) |
+| `temperatura` | sim | entre -40 e 80 °C (400 fora disso) |
+| `umidade` | sim | entre 0 e 100 % (400 fora disso) |
+| `portaAberta` | sim | booleano |
+| `registradaEm` | não | ISO 8601; sem isso o servidor usa o recebimento. No futuro = 400 (tolerância de 5 min para relógio do sensor) |
+| `origem` | não | `SENSOR` (padrão) ou `SIMULADO` |
+
+A resposta traz os alertas que a leitura abriu, então o próprio sensor (ou o script da demo) vê o alarme
+sem outra chamada:
+
+```json
+{"leitura":{"id":37,"equipamentoId":3,"temperatura":9.1,"umidade":72.0,"portaAberta":false,
+            "registradaEm":"2026-11-10T23:35:00+00:00","origem":"SENSOR"},
+ "alertasAbertos":[{"id":8,"tipo":"TEMP_ALTA","severidade":"CRITICA","status":"ABERTO"}]}
+```
+
+Intervalo sugerido de publicação: **2 minutos** — é o intervalo da carga inicial e a regra exige 3 leituras
+seguidas fora da faixa, então em 2 min o alarme aparece no app em ~6 min (dentro da meta de 15 min do
+pitch). Publicar mais rápido que isso também funciona: a fila não duplica alerta aberto.
+
+## Como apontar o app para a API
+
+`localhost` no celular é o celular. Três caminhos, do mais simples ao mais realista na apresentação:
+
+| Onde o app roda | URL da API | O que precisa |
+|---|---|---|
+| Emulador Android | `http://10.0.2.2:5199` | nada além do emulador (`10.0.2.2` é o PC visto de dentro dele) |
+| Aparelho no USB | `http://localhost:5199` | `adb reverse tcp:5199 tcp:5199` (o cabo leva a porta do PC para o celular) |
+| Celular na mesma Wi-Fi | `http://<ip-do-pc>:5199` | API escutando em `0.0.0.0` e a porta liberada no firewall |
+
+Para a API aceitar conexão de fora do PC (Wi-Fi na demo), suba com:
+
+```bash
+ASPNETCORE_URLS=http://0.0.0.0:5199 dotnet run --project src/FrioSolidario.Api
+```
+
+e libere a porta uma vez: `netsh advfirewall firewall add rule name="Frio Solidario API" dir=in action=allow protocol=TCP localport=5199`.
+Com `localhost:5199` a API só responde na própria máquina — é a causa nº 1 de "o app não conecta".
+
 ## Estado atual
 
 | Parte | Situação |
@@ -144,9 +236,31 @@ de outra instituição, 404 não encontrado, 409 conflito com o estado do banco.
 
 ## Uso de IA
 
-Ferramentas de IA foram usadas como apoio de pesquisa, revisão de texto e explicação de erros, com
-revisão humana do conteúdo. A declaração completa, com as ferramentas e o que cada uma fez, entra
-neste README até o dia 17/11.
+Regra combinada no grupo (reunião de 07/11): cada integrante declara as ferramentas que usou e para quê,
+com revisão humana do resultado. Preencha a sua linha — a tabela vai para o PDF da entrega.
+
+| Integrante | RM | Ferramenta de IA | Para quê |
+|---|---|---|---|
+| André | 554952 | a preencher | a preencher |
+| Arthur | 97781 | a preencher | a preencher |
+| Kevin | 557898 | a preencher | a preencher |
+| Roger | 97540 | a preencher | a preencher |
+| Yasmin | 557413 | a preencher (sugestão: Hermes Agent + Claude Code) | geração e revisão de código da API, testes de integração e revisão do README |
+
+O que vale declarar, sem medo: código gerado com IA e revisado por humano, texto revisado, pesquisa de
+referência (Atlas, ANVISA, Lei 15.224/2025) e explicação de erro. Nenhuma senha, token ou credencial de
+instituição real foi usada; os dados do projeto são fictícios.
+
+## O que ainda não roda (declarado, não escondido)
+
+| Item | Situação | Dono |
+|---|---|---|
+| App mobile | não iniciado no repositório da API | Kevin |
+| Sensor MQTT publicando ao vivo | script de simulação previsto para 10/11; a API já aceita `POST /api/leituras` | Roger |
+| Testes automatizados (xUnit) | não existem ainda; a verificação de hoje é por chamada real documentada acima | Arthur |
+| Autenticação nos CRUD de instituições/equipamentos | rotas ainda abertas | Arthur (10→14/11) |
+
+Melhor a banca ler isso aqui do que descobrir na apresentação — o edital desconta o que não roda.
 
 ## Banco de Dados — Frio Solidário
 
