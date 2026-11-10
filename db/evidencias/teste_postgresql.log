@@ -1,0 +1,111 @@
+﻿FRIO SOLIDARIO - TESTE DO BANCO
+Data: 11/08/2026 22:56:54
+Executando schema.sql
+BEGIN
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+COMMIT
+
+Executando seed.sql
+BEGIN
+INSERT 0 3
+INSERT 0 6
+INSERT 0 6
+INSERT 0 30
+INSERT 0 5
+INSERT 0 12
+ setval 
+--------
+      3
+(1 row)
+
+ setval 
+--------
+      6
+(1 row)
+
+ setval 
+--------
+      6
+(1 row)
+
+ setval 
+--------
+     30
+(1 row)
+
+ setval 
+--------
+      5
+(1 row)
+
+ setval 
+--------
+     12
+(1 row)
+
+COMMIT
+
+Executando verificar.sql
+DO
+DO
+DO
+DO
+  entidade   | registros 
+-------------+-----------
+ alerta      |         5
+ equipamento |         6
+ instituicao |         3
+ leitura     |        30
+ lote        |        12
+ usuario     |         6
+(6 rows)
+
+
+Executando consultas.sql
+ instituicao_id |            instituicao             | lotes_doados | kg_doados_30_dias 
+----------------+------------------------------------+--------------+-------------------
+              1 | Banco de Alimentos Caminhos do Bem |            2 |            162.50
+              2 | Mercado Bairro Solidário           |            2 |            117.70
+              3 | Padaria Sabor e Partilha           |            2 |             68.50
+(3 rows)
+
+ equipamento_id |        equipamento        | total_alertas_criticos 
+----------------+---------------------------+------------------------
+              6 | Câmara de resfriamento    |                      1
+              1 | Câmara fria de hortifrúti |                      1
+(2 rows)
+
+ instituicao_id |            instituicao             | alertas_resolvidos | tempo_medio_minutos 
+----------------+------------------------------------+--------------------+---------------------
+              3 | Padaria Sabor e Partilha           |                  1 |                3.00
+              1 | Banco de Alimentos Caminhos do Bem |                  0 |                    
+              2 | Mercado Bairro Solidário           |                  0 |                    
+(3 rows)
+
+ equipamento_id |          equipamento          | total_leituras | leituras_fora_faixa | percentual_fora_faixa 
+----------------+-------------------------------+----------------+---------------------+-----------------------
+              6 | Câmara de resfriamento        |              5 |                   3 |                 60.00
+              1 | Câmara fria de hortifrúti     |              5 |                   3 |                 60.00
+              2 | Freezer de proteínas          |              5 |                   3 |                 60.00
+              3 | Balcão refrigerado de doações |              5 |                   0 |                  0.00
+              4 | Freezer de congelados         |              5 |                   0 |                  0.00
+              5 | Geladeira de excedentes       |              5 |                   0 |                  0.00
+(6 rows)
+
+ categoria  | total_lotes | lotes_perdidos | taxa_perda_percentual | kg_perdidos 
+------------+-------------+----------------+-----------------------+-------------
+ LATICINIOS |           3 |              2 |                 66.67 |       46.80
+ HORTIFRUTI |           3 |              1 |                 33.33 |       18.50
+(2 rows)
+
+
+RESULTADO FINAL: SUCESSO
