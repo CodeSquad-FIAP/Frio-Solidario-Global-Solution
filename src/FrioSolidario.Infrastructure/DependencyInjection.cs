@@ -19,6 +19,8 @@ public static class DependencyInjection
 
         services.AddDbContext<FrioSolidarioDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<IHealthRepository, HealthRepository>();
+        services.AddScoped<IInstituicaoRepository, InstituicaoRepository>();
+        services.AddScoped<IEquipamentoRepository, EquipamentoRepository>();
         return services;
     }
 }

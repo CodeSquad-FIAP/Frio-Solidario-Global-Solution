@@ -1,10 +1,15 @@
+using System.Text.Json.Serialization;
+using FrioSolidario.Api.Middleware;
 using FrioSolidario.Application;
 using FrioSolidario.Infrastructure;
 using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+// Enums como texto no JSON e no Swagger: o app manda "CAMARA", nao 0.
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -23,6 +28,9 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
+
+// Primeiro na pilha: qualquer excecao da Application vira ProblemDetails (404/400/409/500).
+app.UseTratamentoDeErro();
 
 // Swagger sempre ligado: a banca precisa abrir a documentacao sem alterar configuracao.
 app.UseSwagger();

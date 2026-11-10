@@ -43,14 +43,35 @@ O campo `origemDosDados` é lido do banco de verdade (`SELECT COUNT(*)` em `equi
 Postgres está fora do ar ou o schema não foi carregado, a API não quebra — responde
 `"banco indisponivel (schema nao carregado ou Postgres fora do ar)"` com HTTP 200.
 
+## Endpoints
+
+| Método | Rota | O que faz |
+|---|---|---|
+| GET | `/api/health` | status da API + quantos equipamentos existem no banco |
+| GET | `/api/instituicoes` | lista instituições em ordem alfabética |
+| GET | `/api/instituicoes/{id}` | busca uma instituição (404 se não existe) |
+| POST | `/api/instituicoes` | cadastra (CNPJ com 14 dígitos, sem pontuação; 409 se repetido) |
+| PUT | `/api/instituicoes/{id}` | atualiza |
+| DELETE | `/api/instituicoes/{id}` | remove (409 se tiver equipamentos/usuários/lotes) |
+| GET | `/api/equipamentos?instituicaoId=` | lista equipamentos, filtrando por instituição |
+| GET | `/api/equipamentos/{id}` | busca um equipamento |
+| POST | `/api/equipamentos` | cadastra (temp_min < temp_max, umidade até 100) |
+| PUT | `/api/equipamentos/{id}` | atualiza |
+| DELETE | `/api/equipamentos/{id}` | remove (409 se tiver leituras/alertas) |
+
+Os enums trafegam como texto (`CAMARA`, `MERCADO`, `ABERTO`), nunca como número. Erros de regra de
+negócio voltam em `ProblemDetails` com 400; conflito com o estado do banco volta com 409.
+
 ## Estado atual
 
 | Parte | Situação |
 |---|---|
 | API em 3 camadas + Swagger | pronto (estrutura, injeção de dependência e health check lendo o banco) |
 | Banco de dados | pronto — ER, `schema.sql` com constraints, carga, verificação e 5 consultas (André), testado em PostgreSQL 17.11 |
-| Entidades + acesso a dados (EF Core/Npgsql) | pronto — 6 entidades em `Domain/Entities`, `FrioSolidarioDbContext` e `HealthRepository` na Infrastructure |
-| Login/JWT, CRUD, leituras, alertas | próximos cards (o schema já está fechado; falta o hash do Arthur para o login) |
+| Entidades + acesso a dados (EF Core/Npgsql) | pronto — 6 entidades em `Domain/Entities`, `FrioSolidarioDbContext` e repositórios na Infrastructure |
+| CRUD de instituições e equipamentos | pronto — `/api/instituicoes` e `/api/equipamentos`, com validação e 400/404/409 |
+| Regra de faixa → alerta | próximo card |
+| Login/JWT, leituras | dependem do hash do Arthur e do formato de publicação do Roger |
 | App mobile | Kevin |
 | IoT (MQTT) | Roger |
 
