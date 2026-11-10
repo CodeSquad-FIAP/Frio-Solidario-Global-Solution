@@ -22,7 +22,7 @@ conhece HTTP, e o repositório não devolve DTO de tela. As interfaces de reposi
 
 ## Como rodar (API)
 
-Pré-requisitos: .NET SDK 10.
+Pré-requisitos: .NET SDK 10 e o banco carregado (seção "Como carregar o banco").
 
 ```bash
 dotnet restore
@@ -43,6 +43,59 @@ O campo `origemDosDados` é lido do banco de verdade (`SELECT COUNT(*)` em `equi
 Postgres está fora do ar ou o schema não foi carregado, a API não quebra — responde
 `"banco indisponivel (schema nao carregado ou Postgres fora do ar)"` com HTTP 200.
 
+## Login (demo)
+
+`POST /api/auth/login` devolve o token que as rotas protegidas exigem. Usuários da carga inicial
+(`db/seed.sql`), todos com a senha demonstrativa **`Frio@2026`**:
+
+| E-mail | Papel | Instituição |
+|---|---|---|
+| mariana.costa@caminhosdobem.example | ADMIN | 1 — Banco de Alimentos Caminhos do Bem |
+| ana.rocha@caminhosdobem.example | VOLUNTARIO | 1 |
+| rafael.nunes@bairrosolidario.example | ADMIN | 2 — Mercado Bairro Solidário |
+| bruna.oliveira@bairrosolidario.example | VOLUNTARIO | 2 |
+| carla.mendes@saborepartilha.example | ADMIN | 3 — Padaria Sabor e Partilha |
+| pedro.lima@saborepartilha.example | VOLUNTARIO | 3 |
+
+```bash
+curl -s -X POST http://localhost:5199/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"mariana.costa@caminhosdobem.example","senha":"Frio@2026"}'
+```
+
+A senha nunca é gravada em texto puro: o `senha_hash` do seed é BCrypt (work factor 10) e o login
+confere a senha contra ele. E-mail inexistente e senha errada devolvem o mesmo 401 com a mesma
+mensagem, para não revelar quais e-mails existem. No Swagger, use **Authorize** e cole apenas o
+token. O token vale 8 horas e carrega papel (`ADMIN`/`VOLUNTARIO`) e instituição; a API usa a
+instituição do token para recusar (403) leitura, alerta ou relatório de equipamento de outra
+instituição.
+
+A chave do token fica em `Jwt:Key` no `appsettings.json` (valor de desenvolvimento) e pode ser
+trocada sem editar arquivo:
+
+```bash
+export Jwt__Key="uma-chave-de-pelo-menos-32-caracteres"
+```
+
+## Regra de alerta
+
+A regra vive em `Application/Services/RegraDeAlerta.cs`, sem banco e sem HTTP, e roda em toda leitura
+gravada por `POST /api/leituras`:
+
+| Tipo | Quando abre | Severidade |
+|---|---|---|
+| `TEMP_ALTA` | 3 leituras seguidas acima de `temp_max` | desvio ≥ 1,5 °C = ALTA; ≥ 3 °C = CRÍTICA; senão MEDIA |
+| `TEMP_BAIXA` | 3 leituras seguidas abaixo de `temp_min` | mesmo critério de desvio |
+| `UMIDADE` | 3 leituras seguidas acima de `umid_max` | até 5 pontos acima = BAIXA; acima = MEDIA |
+| `PORTA_ABERTA` | porta aberta sem interrupção por mais de 5 min | 15 min ou mais = ALTA; senão MEDIA |
+
+Por que 3 leituras: porta abrindo por um minuto derruba a leitura de um sensor só, e um alerta por
+leitura encheria a fila do app durante uma falha real. Um alerta aberto por tipo e equipamento basta
+— leituras seguintes fora da faixa não criam alerta duplicado. O alerta nasce `ABERTO` e só fecha em
+`PATCH /api/alertas/{id}/resolver`, que grava quem resolveu e quando (o CHECK do schema exige os dois
+campos). As faixas de severidade são proposta da API para o grupo fechar; mudar a faixa de um
+equipamento no cadastro muda o comportamento sem tocar em código.
+
 ## Endpoints
 
 | Método | Rota | O que faz |
@@ -58,9 +111,21 @@ Postgres está fora do ar ou o schema não foi carregado, a API não quebra — 
 | POST | `/api/equipamentos` | cadastra (temp_min < temp_max, umidade até 100) |
 | PUT | `/api/equipamentos/{id}` | atualiza |
 | DELETE | `/api/equipamentos/{id}` | remove (409 se tiver leituras/alertas) |
+| POST | `/api/auth/login` | autentica e devolve o token (única rota pública) |
+| POST | `/api/leituras` | registra leitura do sensor e devolve os alertas que ela abriu |
+| GET | `/api/equipamentos/{id}/leituras?periodo=24h\|7d` | série do gráfico (24h por padrão) |
+| GET | `/api/alertas?status=ABERTO&equipamentoId=` | fila de alertas, mais grave primeiro |
+| PATCH | `/api/alertas/{id}/resolver` | resolve o alerta com o usuário do token |
+| GET | `/api/equipamentos/{id}/relatorio?de=&ate=` | log térmico em PDF (7 dias por padrão) |
 
-Os enums trafegam como texto (`CAMARA`, `MERCADO`, `ABERTO`), nunca como número. Erros de regra de
-negócio voltam em `ProblemDetails` com 400; conflito com o estado do banco volta com 409.
+As rotas de `/api/auth/login`, `/api/health` e o Swagger são públicas; **leituras, alertas e
+relatório exigem `Authorization: Bearer <token>`**. Os endpoints de CRUD de instituições e
+equipamentos continuam abertos por enquanto — aplicá-los a autenticação é o card de segurança do
+Arthur (10→14/11).
+
+Os enums trafegam como texto (`CAMARA`, `MERCADO`, `ABERTO`), nunca como número. Erros voltam em
+`ProblemDetails`: 400 regra de negócio/validação, 401 credenciais ou token inválido, 403 equipamento
+de outra instituição, 404 não encontrado, 409 conflito com o estado do banco.
 
 ## Estado atual
 
@@ -70,10 +135,12 @@ negócio voltam em `ProblemDetails` com 400; conflito com o estado do banco volt
 | Banco de dados | pronto — ER, `schema.sql` com constraints, carga, verificação e 5 consultas (André), testado em PostgreSQL 17.11 |
 | Entidades + acesso a dados (EF Core/Npgsql) | pronto — 6 entidades em `Domain/Entities`, `FrioSolidarioDbContext` e repositórios na Infrastructure |
 | CRUD de instituições e equipamentos | pronto — `/api/instituicoes` e `/api/equipamentos`, com validação e 400/404/409 |
-| Regra de faixa → alerta | próximo card |
-| Login/JWT, leituras | dependem do hash do Arthur e do formato de publicação do Roger |
+| Login com JWT | pronto — `POST /api/auth/login`, BCrypt + token com papel e instituição |
+| Leituras (ingestão + série) | pronto — `POST /api/leituras` (201) e `GET /api/equipamentos/{id}/leituras?periodo=24h\|7d` |
+| Regra de faixa → alerta | pronto — 3 leituras seguidas fora da faixa, porta aberta por tempo, severidade por desvio; `GET /api/alertas` e `PATCH /api/alertas/{id}/resolver` |
+| Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
 | App mobile | Kevin |
-| IoT (MQTT) | Roger |
+| IoT (MQTT) | Roger — o comando do Mosquitto e o script do sensor entram no README quando ele fechar (16/11) |
 
 ## Uso de IA
 

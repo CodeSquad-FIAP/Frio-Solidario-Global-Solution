@@ -1,6 +1,10 @@
 using FrioSolidario.Application.Repositories;
+using FrioSolidario.Application.Relatorios;
+using FrioSolidario.Application.Security;
 using FrioSolidario.Infrastructure.Persistence;
+using FrioSolidario.Infrastructure.Relatorios;
 using FrioSolidario.Infrastructure.Repositories;
+using FrioSolidario.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +25,17 @@ public static class DependencyInjection
         services.AddScoped<IHealthRepository, HealthRepository>();
         services.AddScoped<IInstituicaoRepository, InstituicaoRepository>();
         services.AddScoped<IEquipamentoRepository, EquipamentoRepository>();
+        services.AddScoped<ILeituraRepository, LeituraRepository>();
+        services.AddScoped<IAlertaRepository, AlertaRepository>();
+        services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+
+        // Seguranca: BCrypt para conferir senha e JWT para o token de acesso do app.
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.Secao));
+        services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+        services.AddScoped<ITokenService, JwtTokenService>();
+
+        // Relatorio em PDF (QuestPDF). Sem estado, por isso singleton.
+        services.AddSingleton<IRelatorioPdf, QuestPdfRelatorioPdf>();
         return services;
     }
 }

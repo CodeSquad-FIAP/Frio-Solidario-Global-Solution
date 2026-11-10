@@ -21,6 +21,14 @@ public sealed class TratamentoDeErroMiddleware(RequestDelegate next, ILogger<Tra
         {
             await EscreverAsync(context, StatusCodes.Status404NotFound, "Recurso nao encontrado", ex.Message);
         }
+        catch (CredenciaisInvalidasException ex)
+        {
+            await EscreverAsync(context, StatusCodes.Status401Unauthorized, "Credenciais invalidas", ex.Message);
+        }
+        catch (AcessoNegadoException ex)
+        {
+            await EscreverAsync(context, StatusCodes.Status403Forbidden, "Acesso negado", ex.Message);
+        }
         catch (RegraDeNegocioException ex)
         {
             await EscreverAsync(context, StatusCodes.Status400BadRequest, "Regra de negocio violada", ex.Message);

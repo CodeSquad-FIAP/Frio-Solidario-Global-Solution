@@ -23,40 +23,41 @@ VALUES
 
 
 -- 2. USUARIOS (6)
--- Hashes demonstrativos. As credenciais de login
--- devem ser configuradas com a API.
+-- Os hashes sao BCrypt (work factor 10) da senha demonstrativa documentada no
+-- README, secao "Login (demo)". A senha em texto puro nao vai para o banco nem
+-- para este arquivo: o login confere a senha contra o hash.
 
 INSERT INTO usuario
 (id, nome, email, senha_hash, papel, instituicao_id)
 VALUES
 (1, 'Mariana Costa',
  'mariana.costa@caminhosdobem.example',
- '$2b$10$hwmAenydO6ds9klHP9Tu2OlU6RaP6NoY7q83qBM4oLG4dZeCjrmPa',
+ '$2a$10$uN9Au9Z/.N2nZ5dK46yjcuFF4Q7cQ.syE7akEKM.WGjgbwhgYl4Tq',
  'ADMIN', 1),
 
 (2, 'Ana Rocha',
  'ana.rocha@caminhosdobem.example',
- '$2b$10$WpML43uXrmoZxnjtIJJfR.OfYJxOM2DgbWIYlLC4BF7vZkp5Ep5K6',
+ '$2a$10$dwy4XginHJb/kvfwb9ODZ.bAlKnRbhH0Px1.ccFn/UJeCv8xqwa92',
  'VOLUNTARIO', 1),
 
 (3, 'Rafael Nunes',
  'rafael.nunes@bairrosolidario.example',
- '$2b$10$CvmXX6iWqMUQ4r.mvWCGae5LWQ3ofFLa2blHOAs.lSQLTEWIP0/Ka',
+ '$2a$10$AbGF5gV5h0SmBnCg5DmRfO2gJ5zMOFXckoYmNsphSP8IkgYdi67Q6',
  'ADMIN', 2),
 
 (4, 'Bruna Oliveira',
  'bruna.oliveira@bairrosolidario.example',
- '$2b$10$xyopMZ.Cfu9t4hfr3eo95.yp4RINt3kcoL8pClvNfbC61af0bwsE.',
+ '$2a$10$5dIpsqDWT67pkbWH78eXWee7NzHckvk8GomMNbQq7fjxhlwsuiN/m',
  'VOLUNTARIO', 2),
 
 (5, 'Carla Mendes',
  'carla.mendes@saborepartilha.example',
- '$2b$10$IRL7MEU7mNUiDF8ugZiB3OiWVMZUYgMPaj3i/g7Ci5tssH8OP3e/C',
+ '$2a$10$Jjs1gpnG1aCxue12uCRYnOrudH9SK.SSR21M8X4KYZE3zN5OdLVPq',
  'ADMIN', 3),
 
 (6, 'Pedro Lima',
  'pedro.lima@saborepartilha.example',
- '$2b$10$cS9N/dw0Q16IqWWO6Rj5Ke69kWzFuDJu7EO/fPuV2qJKEuWf.awyq',
+ '$2a$10$4Zo5eCppv.d8X8CT8OLOnu7oLslc982aZAZP0aFXcAgUz0TLWzMKm',
  'VOLUNTARIO', 3);
 
 
