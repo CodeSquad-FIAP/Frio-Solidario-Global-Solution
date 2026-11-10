@@ -121,6 +121,13 @@ erDiagram
 - **Status do alerta:** ABERTO ou RESOLVIDO.
 - **Status do lote:** DISPONIVEL, DISTRIBUIDO ou PERDIDO.
 
+Coerência entre status e datas:
+
+- Alerta ABERTO não tem data nem responsável de resolução; alerta RESOLVIDO tem os dois, e a
+  resolução não pode ser anterior à criação.
+- Lote DISPONIVEL não tem data de retirada; lote DISTRIBUIDO ou PERDIDO tem — sem isso, um lote
+  distribuído sem data sairia da consulta de kg doados sem aviso.
+
 Observação: os valores de severidade do alerta devem ser
 validados com a equipe responsável pela API.
 
@@ -133,3 +140,9 @@ Arquivos relacionados:
 - `db/schema.sql`
 - `db/seed.sql`
 - `db/verificar.sql`
+- `db/consultas.sql`
+- `db/testar.ps1`
+- `db/evidencias/teste_postgresql.log`
+
+As classes de entidade equivalentes ficam em `src/FrioSolidario.Domain/Entities` e o mapeamento
+EF Core em `src/FrioSolidario.Infrastructure/Persistence/FrioSolidarioDbContext.cs`.

@@ -7,8 +7,8 @@ namespace FrioSolidario.Application.Repositories;
 public interface IHealthRepository
 {
     /// <summary>
-    /// Quantidade de equipamentos cadastrados, ou <c>null</c> enquanto o schema
-    /// (dono: Andre) nao estiver conectado a API.
+    /// Quantidade de equipamentos cadastrados no schema do banco, ou <c>null</c> quando o
+    /// banco nao responde (fora do ar ou schema nao carregado).
     /// </summary>
     Task<int?> ContarEquipamentosAsync(CancellationToken cancellationToken = default);
 }

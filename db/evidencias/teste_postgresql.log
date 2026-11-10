@@ -1,5 +1,6 @@
-﻿FRIO SOLIDARIO - TESTE DO BANCO
-Data: 11/08/2026 22:56:54
+FRIO SOLIDARIO - TESTE DO BANCO
+Data: 10/11/2026 18:51:52
+
 Executando schema.sql
 BEGIN
 CREATE TABLE
@@ -8,6 +9,7 @@ CREATE TABLE
 CREATE TABLE
 CREATE TABLE
 CREATE TABLE
+CREATE INDEX
 CREATE INDEX
 CREATE INDEX
 CREATE INDEX
@@ -56,8 +58,20 @@ COMMIT
 
 Executando verificar.sql
 DO
+NOTICE:  OK: todas as quantidades estao corretas
 DO
+NOTICE:  OK: indices obrigatorios encontrados
 DO
+NOTICE:  OK: relacionamentos e alertas corretos
+NOTICE:  OK: temperatura invalida bloqueada
+NOTICE:  OK: umidade invalida bloqueada
+NOTICE:  OK: email duplicado bloqueado
+NOTICE:  OK: papel invalido bloqueado
+NOTICE:  OK: status invalido bloqueado
+NOTICE:  OK: lote distribuido sem retirada bloqueado
+NOTICE:  OK: lote disponivel com retirada bloqueado
+NOTICE:  OK: chave estrangeira invalida bloqueada
+NOTICE:  SUCESSO: principais constraints verificadas
 DO
   entidade   | registros 
 -------------+-----------

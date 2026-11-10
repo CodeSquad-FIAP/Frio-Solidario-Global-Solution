@@ -1,5 +1,5 @@
 -- FRIO SOLIDARIO - GLOBAL SOLUTION FIAP
--- Banco de dados: PostgreSQL 15+
+-- Banco de dados: PostgreSQL 17
 -- Criacao das 6 entidades do projeto
 
 BEGIN;
@@ -193,6 +193,16 @@ CREATE TABLE lote (
                 'DISTRIBUIDO',
                 'PERDIDO'
             )
+        ),
+
+    -- Lote disponivel nao tem retirada; lote que saiu (distribuido ou perdido)
+    -- tem data de retirada. Sem isso a CONSULTA 1 (kg doados) descartaria
+    -- em silencio um lote marcado como DISTRIBUIDO sem data.
+    CONSTRAINT ck_lote_retirada_coerente
+        CHECK (
+            (status = 'DISPONIVEL' AND retirado_em IS NULL)
+            OR
+            (status IN ('DISTRIBUIDO', 'PERDIDO') AND retirado_em IS NOT NULL)
         )
 );
 
@@ -203,6 +213,10 @@ CREATE INDEX idx_leitura_equipamento_registrada_em
 
 CREATE INDEX idx_alerta_status
     ON alerta (status);
+
+-- Usado pelas CONSULTAS 2 e 3 (filtro por equipamento + periodo de criacao)
+CREATE INDEX idx_alerta_equipamento_criado_em
+    ON alerta (equipamento_id, criado_em DESC);
 
 -- INDICES ADICIONAIS
 

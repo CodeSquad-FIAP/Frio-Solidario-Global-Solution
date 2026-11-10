@@ -36,16 +36,21 @@ dotnet run --project src/FrioSolidario.Api
 
 ```json
 {"servico":"Frio Solidario API","status":"ok","versao":"1.0.0","ambiente":"Development",
- "verificadoEm":"2026-11-07T21:10:49-03:00","origemDosDados":"sem banco conectado (schema em construcao)"}
+ "verificadoEm":"2026-11-10T18:51:30-03:00","origemDosDados":"6 equipamentos no banco"}
 ```
+
+O campo `origemDosDados` é lido do banco de verdade (`SELECT COUNT(*)` em `equipamento`): quando o
+Postgres está fora do ar ou o schema não foi carregado, a API não quebra — responde
+`"banco indisponivel (schema nao carregado ou Postgres fora do ar)"` com HTTP 200.
 
 ## Estado atual
 
 | Parte | Situação |
 |---|---|
-| API em 3 camadas + Swagger | pronto (estrutura, injeção de dependência e health check) |
-| Banco de dados | em construção — ER/schema com o André; `HealthRepository` ainda em memória |
-| Login/JWT, CRUD, leituras, alertas | próximos cards (dependem do schema e do hash do Arthur) |
+| API em 3 camadas + Swagger | pronto (estrutura, injeção de dependência e health check lendo o banco) |
+| Banco de dados | pronto — ER, `schema.sql` com constraints, carga, verificação e 5 consultas (André), testado em PostgreSQL 17.11 |
+| Entidades + acesso a dados (EF Core/Npgsql) | pronto — 6 entidades em `Domain/Entities`, `FrioSolidarioDbContext` e `HealthRepository` na Infrastructure |
+| Login/JWT, CRUD, leituras, alertas | próximos cards (o schema já está fechado; falta o hash do Arthur para o login) |
 | App mobile | Kevin |
 | IoT (MQTT) | Roger |
 
@@ -54,9 +59,6 @@ dotnet run --project src/FrioSolidario.Api
 Ferramentas de IA foram usadas como apoio de pesquisa, revisão de texto e explicação de erros, com
 revisão humana do conteúdo. A declaração completa, com as ferramentas e o que cada uma fez, entra
 neste README até o dia 17/11.
-
-
-
 
 ## Banco de Dados — Frio Solidário
 
@@ -83,7 +85,39 @@ integridade dos dados.
 - `db/schema.sql`: criação das tabelas, constraints e índices.
 - `db/seed.sql`: carga inicial do banco de dados.
 - `db/verificar.sql`: validação dos registros e constraints.
+- `db/consultas.sql`: as 5 consultas de indicadores.
 - `db/testar.ps1`: execução automatizada dos testes.
+
+### Como carregar o banco
+
+Pré-requisito: PostgreSQL 17 com o cliente `psql` no PATH.
+
+```bash
+createdb -U postgres frio_solidario
+psql -U postgres -d frio_solidario -v ON_ERROR_STOP=1 -f db/schema.sql
+psql -U postgres -d frio_solidario -v ON_ERROR_STOP=1 -f db/seed.sql
+```
+
+Sem PostgreSQL instalado na máquina, o mesmo banco sobe em container (foi assim que a integração foi
+testada):
+
+```bash
+docker run -d --name frio-pg -p 5432:5432 -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=frio_solidario -v "$PWD/db:/sql:ro" postgres:17
+docker exec frio-pg psql -U postgres -d frio_solidario -v ON_ERROR_STOP=1 -f /sql/schema.sql
+docker exec frio-pg psql -U postgres -d frio_solidario -v ON_ERROR_STOP=1 -f /sql/seed.sql
+```
+
+A API lê esse banco pela connection string `ConnectionStrings:FrioSolidario` do
+`src/FrioSolidario.Api/appsettings.json` (por padrão `localhost:5432/frio_solidario`). Para apontar
+para outro servidor sem editar arquivo, use a variável de ambiente:
+
+```bash
+export ConnectionStrings__FrioSolidario="Host=localhost;Port=5432;Database=frio_solidario;Username=postgres;Password=postgres"
+```
+
+O `schema.sql` é a fonte da verdade do modelo: o EF Core em `Infrastructure/Persistence` só mapeia as
+tabelas, não cria nem altera nenhuma delas.
 
 ### Carga inicial
 
@@ -105,6 +139,19 @@ umidade, abertura de porta e resolução de alertas.
 - `leitura(equipamento_id, registrada_em)`
 - `alerta(status)`
 
+Índice adicional, usado pelas consultas 2 e 3: `alerta(equipamento_id, criado_em)`.
+
+### Regras de coerência
+
+Além dos CHECK de faixa e de vocabulário, o schema exige coerência entre status e datas:
+
+- alerta `ABERTO` não tem `resolvido_em`/`resolvido_por_id`; alerta `RESOLVIDO` tem os dois, com
+  `resolvido_em >= criado_em`.
+- lote `DISPONIVEL` não tem `retirado_em`; lote `DISTRIBUIDO` ou `PERDIDO` tem. Sem esse CHECK, um
+  lote marcado como distribuído sem data sairia da conta da consulta 1 (kg doados) sem aviso.
+- o alerta só pode apontar para uma leitura do mesmo equipamento (FK composta
+  `(leitura_id, equipamento_id)`).
+
 ### Como testar
 
 Requisitos:
@@ -123,7 +170,8 @@ verifica os dados e gera o log de evidências.
 
 ### Evidências
 
-O teste foi executado com sucesso em PostgreSQL 17.11.
+O teste foi executado com sucesso em PostgreSQL 17.11 (10/11/2026), incluindo os testes das
+constraints de coerência (alerta resolvido e retirada de lote).
 
 Log de execução:
 `db/evidencias/teste_postgresql.log`
@@ -136,10 +184,6 @@ O modelo entidade-relacionamento está previsto nos arquivos:
 
 - `docs/der.md`
 - `docs/der.png`
-
-
-
-
 
 ## Consultas SQL — Indicadores de Impacto
 

@@ -1,16 +1,20 @@
 # Entidades do dominio
 
-Dono: **André** (card "ER das 6 entidades" → "Script .sql").
+Dono do modelo de dados: **André** (card "ER das 6 entidades" → "Script .sql").
+As classes abaixo espelham o `db/schema.sql`, que é a fonte da verdade.
 
-Quando o diagrama ER fechar, as classes de entidade entram **nesta pasta**, uma por arquivo:
+| Arquivo | Entidade | Tabela |
+|---|---|---|
+| `Usuario.cs` | `Usuario` | `usuario` |
+| `Instituicao.cs` | `Instituicao` | `instituicao` |
+| `Equipamento.cs` | `Equipamento` | `equipamento` |
+| `Leitura.cs` | `Leitura` | `leitura` |
+| `Alerta.cs` | `Alerta` | `alerta` |
+| `Lote.cs` | `Lote` | `lote` |
 
-| Arquivo | Entidade |
-|---|---|
-| `Usuario.cs` | usuario |
-| `Instituicao.cs` | instituicao |
-| `Equipamento.cs` | equipamento |
-| `Leitura.cs` | leitura |
-| `Alerta.cs` | alerta |
-| `Lote.cs` | lote |
+Os vocabulários fechados (papel, tipo, origem, severidade, status) ficam em `../Enums.cs` e têm
+conversão para texto no mapeamento, então o valor gravado é o mesmo do CHECK do banco.
 
-Nada de atributo de banco (coluna, tabela, índice) aqui: mapeamento fica na Infrastructure.
+Nada de atributo de banco (coluna, tabela, índice) aqui: mapeamento fica na Infrastructure
+(`src/FrioSolidario.Infrastructure/Persistence/FrioSolidarioDbContext.cs`), junto com os nomes de
+coluna e as precisões de `NUMERIC`.

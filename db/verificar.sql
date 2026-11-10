@@ -214,6 +214,45 @@ BEGIN
     END;
 
 
+    -- Testar lote DISTRIBUIDO sem data de retirada
+    BEGIN
+
+        INSERT INTO lote
+        (instituicao_id, descricao,
+         categoria, kg, validade, status)
+        VALUES
+        (1, 'Lote distribuido sem retirada',
+         'FRUTAS', 10, CURRENT_DATE + 3, 'DISTRIBUIDO');
+
+        RAISE EXCEPTION
+            'Falha: lote distribuido sem retirada foi aceito';
+
+    EXCEPTION WHEN check_violation THEN
+        RAISE NOTICE
+            'OK: lote distribuido sem retirada bloqueado';
+    END;
+
+
+    -- Testar lote DISPONIVEL com data de retirada
+    BEGIN
+
+        INSERT INTO lote
+        (instituicao_id, descricao,
+         categoria, kg, validade, status, retirado_em)
+        VALUES
+        (1, 'Lote disponivel ja retirado',
+         'FRUTAS', 10, CURRENT_DATE + 3,
+         'DISPONIVEL', CURRENT_TIMESTAMP);
+
+        RAISE EXCEPTION
+            'Falha: lote disponivel com retirada foi aceito';
+
+    EXCEPTION WHEN check_violation THEN
+        RAISE NOTICE
+            'OK: lote disponivel com retirada bloqueado';
+    END;
+
+
     -- Testar chave estrangeira invalida
     BEGIN
 

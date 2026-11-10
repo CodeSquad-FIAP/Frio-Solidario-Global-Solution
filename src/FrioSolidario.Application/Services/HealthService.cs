@@ -20,7 +20,7 @@ public sealed class HealthService : IHealthService
             Ambiente: Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development",
             VerificadoEm: DateTimeOffset.Now,
             OrigemDosDados: totalEquipamentos is null
-                ? "sem banco conectado (schema em construcao)"
+                ? "banco indisponivel (schema nao carregado ou Postgres fora do ar)"
                 : $"{totalEquipamentos} equipamentos no banco");
     }
 }
