@@ -1,6 +1,7 @@
 # Execução dos testes — Frio Solidário
 
-Execução do [plano de testes](plano-de-testes.md) (8 casos) em **11/11/2026**, por Arthur (frente
+Execução do [plano de testes](plano-de-testes.md) (8 casos na rodada; o caso 9 foi acrescentado depois e
+está no fim deste documento) em **11/11/2026**, por Arthur (frente
 Segurança + Testes). Cada caso tem um arquivo de evidência em `docs/evidencias-testes/` com a
 requisição enviada, a resposta recebida (status, cabeçalhos de segurança e corpo) e a consulta ao
 banco que confirma o efeito, e há **27 prints** em `docs/evidencias-testes/prints/`: 21 do Swagger UI e 6 do terminal com as
@@ -93,7 +94,7 @@ instituição, validade).
 - **Segurança (caso 7).** Sem token, 401; token adulterado, 401; injeção de SQL no e-mail, na senha e no
   filtro foi recusada (400/401/400); nome com `<script>` foi recusado (400) e não gravou nada; a 11ª
   tentativa de login no mesmo minuto voltou 429 com `Retry-After: 60`.
-- **Extras do caso 7 (fora dos 8 casos do plano).** Um token assinado com a chave certa e validade futura
+- **Extras do caso 7 (fora dos casos do plano).** Um token assinado com a chave certa e validade futura
   entra (200, é o controle); o mesmo token, vencido há 1 h, é recusado com 401 "Token expirado. Faca
   login novamente."; um token sem assinatura (`alg: none`) é recusado (401). É a evidência do token
   expirado que o plano declarava como não manual.
@@ -117,3 +118,27 @@ instituição, validade).
 - **Duração.** A rodada leva cerca de 3 minutos, porque o caso 7 espera 61 segundos para zerar a janela
   do limite de login antes do passo 10 e mais 61 segundos antes dos extras.
 - **Entrada de dados.** Os dados de teste são fictícios; nenhuma credencial real foi usada.
+
+## Caso 9 — relatório em PDF (acrescentado depois da rodada)
+
+O caso 9 entrou no plano porque os 8 casos não tocavam no relatório do período. Foi executado em
+**11/11/2026**, no mesmo ambiente (PostgreSQL 17.11 com o seed recarregado e a API do commit `453aa03`,
+que corrigiu o fuso do PDF), **pela API em HTTP direto** — sem Swagger UI, então este caso não tem print;
+a evidência é o status, os cabeçalhos e o texto do PDF extraído, transcritos abaixo.
+
+**9 de 9 passos.**
+
+| # | Passo | Medido |
+|---|---|---|
+| 1 | `GET /api/equipamentos/1/relatorio` | 200, `Content-Type: application/pdf`, `Content-Disposition: attachment; filename=relatorio-equipamento-1-20261104-20261111.pdf`, corpo com 43.246 bytes começando por `%PDF-` |
+| 2 | Cabeçalho do PDF | "FRIO SOLIDARIO - LOG TERMICO", "Banco de Alimentos Caminhos do Bem - Câmara fria de hortifrúti (CAMARA)", faixa 0,0 a 4,0 C, "Periodo (horario de Brasilia): 04/11/2026 00:00 a 11/11/2026 23:59" |
+| 3 | Linhas e alertas | 5 leituras em ordem crescente (3,1 °C a 7,6 °C), as 3 últimas "Fora da faixa"; "Alertas no periodo (1)" com `TEMP_ALTA` `CRITICA` `ABERTO` |
+| 4 | Fuso do horário | o PDF imprime 19:02, igual a `registrada_em AT TIME ZONE 'America/Sao_Paulo'` no banco; o valor UTC seria 22:02 |
+| 5 | `?de=2026-01-01&ate=2026-11-11` | 400 "Periodo maximo do relatorio e de 92 dias." |
+| 6 | `?de=2026-11-10&ate=2026-11-01` | 400 "Periodo invalido: de (10/11/2026) e posterior a ate (01/11/2026)." |
+| 7 | `?de=2026-10-01&ate=2026-10-02` (sem leitura) | 200, 39.317 bytes; o PDF diz "Sem leituras no periodo." |
+| 8 | `GET /api/equipamentos/999/relatorio` | 404 "Equipamento 999 nao encontrado." |
+| 9 | `GET /api/equipamentos/1/relatorio` com token da instituição 2 | 403 "Equipamento 1 pertence a outra instituicao." |
+
+Com o caso 9, o plano fecha **9 de 9 casos e 67 de 67 passos**; os 8 primeiros seguem com as evidências
+e os prints desta rodada.

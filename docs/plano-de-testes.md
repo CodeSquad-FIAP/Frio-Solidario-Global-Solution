@@ -1,7 +1,7 @@
 # Plano de testes — Frio Solidário
 
 Global Solution 2026/2 — FIAP 3ESOA. Responsável: Arthur (frente Segurança + Testes).
-Este plano tem **8 casos**. Cada caso traz pré-condição, passos, resultado esperado e a evidência a
+Este plano tem **9 casos**. Cada caso traz pré-condição, passos, resultado esperado e a evidência a
 coletar, e cada um aponta para o trecho do README ou da regra de alerta que ele verifica. A execução
 (com evidência) é o card seguinte (15/11); o caso 5 e o caso 6 também viram testes xUnit (15→16/11).
 
@@ -18,6 +18,7 @@ casos cobrem as cinco promessas do projeto:
 | Cadastro e manutenção dos equipamentos e suas faixas | 3, 4 |
 | Regra de faixa: 3 leituras seguidas fora da faixa abrem alerta, 1 ou 2 não | 5, 6 |
 | O voluntário recebe a fila de alertas, resolve no local e fica registrado quem resolveu | 8 |
+| O período atendido vira um log térmico em PDF, no horário de Brasília, para a fiscalização | 9 |
 
 Um caso **passa** quando todos os resultados esperados dos seus passos acontecem. **Falha** quando um
 deles não acontece, e a falha é registrada com o que a API devolveu de fato.
@@ -59,11 +60,16 @@ Senha de todos os usuários: **`Frio@2026`** (demonstrativa, documentada no READ
 
 ### Ordem de execução
 
-Execute na ordem **1, 2, 3, 4, 5, 6, 8, 7**. O caso 4 usa o equipamento criado no caso 3, o 6 parte da
+Execute na ordem **1, 2, 3, 4, 5, 6, 8, 9, 7**. O caso 4 usa o equipamento criado no caso 3, o 6 parte da
 sequência deixada pelo 5, e o último passo do caso 7 esgota o limite de tentativas de login (o IP fica
 bloqueado por 1 minuto), então ele vai por último.
 
-## 3. Os 8 casos
+**Cada login conta no limite de 10 por minuto**, não só os do caso 7: emendar casos sem esperar faz um
+login legítimo voltar **429** no meio da execução (e sem token, o passo seguinte vira 401 e parece
+falha do sistema). Duas saídas: reaproveitar o token já obtido no caso 1, ou esperar 1 minuto entre
+blocos de casos. Confira antes de culpar a API: `detail` "Limite de tentativas de login atingido".
+
+## 3. Os 9 casos
 
 Convenções: `{{token-X}}` é o token devolvido pelo login do usuário X (caso 1), enviado como
 `Authorization: Bearer <token>`. Mensagens e títulos de erro são os que a API devolve em
@@ -128,7 +134,7 @@ mostrando que o equipamento está intacto.
 | # | Passo | Resultado esperado |
 |---|---|---|
 | 1 | `POST /api/equipamentos` com `{"instituicaoId":1,"nome":"Freezer de teste","tipo":"FREEZER","tempMin":-22,"tempMax":-15,"umidMax":80}` | **201**, corpo com `id` novo (7), `instituicao` "Banco de Alimentos Caminhos do Bem", `ativo` true. Guarde o `id` |
-| 2 | `GET /api/equipamentos?instituicaoId=1` | **200**, a lista traz o equipamento novo junto com os equipamentos 1 e 2 |
+| 2 | `GET /api/equipamentos?instituicaoId=1` | **200**, a lista traz o equipamento novo junto com os equipamentos 1 e 2. Quem filtra é a instituição **do token**; o `instituicaoId` na query é ignorado hoje (não serve para ver a instituição de outro usuário) |
 | 3 | `POST` com `tempMin` 8 e `tempMax` 2 | **400** (`detail` "Temperatura minima (8) deve ser menor que a maxima (2).") |
 | 4 | `POST` com `umidMax` 101 | **400** de validação ("Umidade maxima deve ficar entre 0,01 e 100.") |
 | 5 | `POST` com `"tipo":"AQUARIO"` | **400** (tipo fora de `CAMARA`, `GELADEIRA`, `FREEZER`) |
@@ -259,6 +265,31 @@ passo 10.
 **Evidência:** print da lista no app antes e depois de resolver (o alerta some da fila de abertos),
 respostas dos passos 2, 4 e 5 e o `psql` do passo 7.
 
+---
+
+### Caso 9 — Relatório do período em PDF
+
+| | |
+|---|---|
+| **Verifica** | README, "Endpoints": `GET /api/equipamentos/{id}/relatorio` devolve o log térmico em PDF, 7 dias por padrão, teto de 92 dias, horários no fuso de Brasília |
+| **Pré-condição** | Seed recém-carregado (as leituras do seed usam `CURRENT_TIMESTAMP`); `{{token-mariana}}` (instituição 1) |
+| **Automação** | Execução manual (o PDF é conferido a olho) |
+
+| # | Passo | Resultado esperado |
+|---|---|---|
+| 1 | `GET /api/equipamentos/1/relatorio` | **200**, `Content-Type: application/pdf`, `Content-Disposition: attachment; filename=relatorio-equipamento-1-<de>-<ate>.pdf` e corpo começando por `%PDF-` (cerca de 43 KB) |
+| 2 | Abrir o PDF e ler o cabeçalho | "FRIO SOLIDARIO - LOG TERMICO", instituição e equipamento com a faixa (0,0 a 4,0 °C, umidade máx. 85 %), "Periodo (horario de Brasilia): ... 00:00 a ... 23:59" (7 dias) e "Emitido em" |
+| 3 | Conferir as linhas do PDF | **5 leituras** em ordem crescente, cada uma com temperatura, umidade, porta, origem e Situação (`Normal` / `Fora da faixa`), e a seção "Alertas no periodo (1)" com `TEMP_ALTA` `CRITICA` `ABERTO` |
+| 4 | Comparar o horário do PDF com o banco: `SELECT registrada_em AT TIME ZONE 'America/Sao_Paulo' FROM leitura WHERE equipamento_id = 1 ORDER BY id LIMIT 1;` | o horário impresso é o **de Brasília**, igual ao do `psql` — não o valor UTC (`AT TIME ZONE 'UTC'`, 3 h à frente) |
+| 5 | `GET .../relatorio?de=2026-01-01&ate=2026-11-11` | **400** ("Periodo maximo do relatorio e de 92 dias.") |
+| 6 | `GET .../relatorio?de=2026-11-10&ate=2026-11-01` | **400** ("Periodo invalido: de (10/11/2026) e posterior a ate (01/11/2026).") |
+| 7 | `GET .../relatorio?de=2026-10-01&ate=2026-10-02` (período sem leitura) | **200** com o PDF dizendo "Sem leituras no periodo." — dia parado não é erro: quem imprime precisa do arquivo |
+| 8 | `GET /api/equipamentos/999/relatorio` | **404** ("Equipamento 999 nao encontrado.") |
+| 9 | `GET /api/equipamentos/1/relatorio` com `{{token-rafael}}` (instituição 2) | **403** ("Equipamento 1 pertence a outra instituicao.") |
+
+**Evidência:** as respostas dos passos 1 e 5 a 9 com o status; o PDF aberto (passos 2 e 3) e o `psql`
+do passo 4, que é o que prova o fuso.
+
 ## 4. Rastreabilidade
 
 | Caso | Origem no README | Cards que o sustentam | Onde roda |
@@ -271,14 +302,17 @@ respostas dos passos 2, 4 e 5 e o `psql` do passo 7.
 | 6 | "Regra de alerta" | Regra de faixa → alerta | API e xUnit |
 | 7 | "Segurança" | JWT + validação + anti-SQLi + anti-XSS | API / Swagger |
 | 8 | "Contrato para o app" | Fila e resolução; lista de alertas no app (Kevin) | App e API |
+| 9 | "Endpoints" (relatório) | Relatório de logs em PDF; fuso do projeto | API / Swagger |
 
 ## 5. Fora deste plano (declarado)
 
 - **Alerta de umidade e de porta aberta:** a regra existe (`UMIDADE`, `PORTA_ABERTA` por tempo), mas
-  fica fora dos 8 casos. O seed traz um exemplo de cada (alertas 3 e 4) para a demonstração.
+  fica fora dos 9 casos. O seed traz um exemplo de cada (alertas 3 e 4) para a demonstração.
 - **Sensor MQTT ao vivo:** o caso 5 e o 6 enviam as leituras pelo mesmo `POST /api/leituras` que o
   sensor usa; a publicação MQTT é do Roger e não está neste repositório.
 - **Token vencido:** o token vale 8 h e esperar isso não cabe numa execução manual. O plano cobre
   o token adulterado (caso 7, passo 2); o token expirado foi verificado na auditoria do card de
   segurança, com um token gerado já vencido.
 - **Carga e desempenho** e **HTTPS** não fazem parte da entrega.
+- **Health check (`/api/health`):** é infraestrutura, não promessa de produto — responde 200 sem token e
+  é exercitado indiretamente em toda execução. Não vira caso.
