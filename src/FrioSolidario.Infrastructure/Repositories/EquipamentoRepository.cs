@@ -53,15 +53,9 @@ public sealed class EquipamentoRepository(FrioSolidarioDbContext contexto) : IEq
         await SalvarAsync(cancellationToken);
     }
 
-    public async Task RemoverAsync(Equipamento equipamento, CancellationToken cancellationToken = default)
-    {
-        contexto.Equipamentos.Remove(equipamento);
-        await SalvarAsync(cancellationToken);
-    }
-
     /// <summary>
-    /// Grava traduzindo violacao de constraint em erro de negocio: remocao de equipamento com
-    /// leituras/alertas vira <see cref="Application.Common.ConflitoException"/> (HTTP 409), nao 500.
+    /// Grava traduzindo violacao de constraint em erro de negocio: dados repetidos ou faixa invalida
+    /// viram <see cref="Application.Common.ConflitoException"/> (HTTP 409), nao 500.
     /// </summary>
     private async Task SalvarAsync(CancellationToken cancellationToken)
     {

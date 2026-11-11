@@ -17,7 +17,7 @@ inesperado durante a rodada.
 | 1 | Login com BCrypt, mesmo 401 para e-mail inexistente e senha errada | 5/5 | Passou | completa | [caso-01](evidencias-testes/caso-01-login-bcrypt.md) |
 | 2 | ADMIN escreve, VOLUNTARIO não (401/403) | 7/7 | Passou | completa | [caso-02](evidencias-testes/caso-02-perfis.md) |
 | 3 | Cadastro de equipamento e faixa inválida | 6/6 | Passou | **só a API** (tela do app não executada) | [caso-03](evidencias-testes/caso-03-cadastro-equipamento.md) |
-| 4 | Editar, remover (409 com leituras) e série de 24 h | 7/7 | Passou | completa | [caso-04](evidencias-testes/caso-04-manutencao-equipamento.md) |
+| 4 | Editar, desativar (DELETE lógico, histórico preservado) e série de 24 h | 7/7 | Passou | completa | [caso-04](evidencias-testes/caso-04-manutencao-equipamento.md) |
 | 5 | 1 ou 2 leituras fora da faixa não abrem alerta | 7/7 | Passou | completa | [caso-05](evidencias-testes/caso-05-regra-menos-de-3-leituras.md) |
 | 6 | 3 leituras seguidas abrem 1 alerta, sem duplicar | 6/6 | Passou | completa | [caso-06](evidencias-testes/caso-06-regra-3-leituras.md) |
 | 7 | Token, SQL Injection, XSS, isolamento e limite de login | 13/13 | Passou | completa (10 passos do plano + 3 extras) | [caso-07](evidencias-testes/caso-07-seguranca.md) |
@@ -118,6 +118,12 @@ instituição, validade).
 - **Duração.** A rodada leva cerca de 3 minutos, porque o caso 7 espera 61 segundos para zerar a janela
   do limite de login antes do passo 10 e mais 61 segundos antes dos extras.
 - **Entrada de dados.** Os dados de teste são fictícios; nenhuma credencial real foi usada.
+- **DELETE lógico do equipamento (11/11).** `DELETE /api/equipamentos/{id}` passou a **desativar**
+  (`ativo: false`, 204) em vez de apagar: leitura e alerta antigos continuam, e desativar de novo devolve
+  409. O caso 4 foi reexecutado com esse comportamento — 204, `ativo: false`, as 5 leituras preservadas e
+  o relatório do período ainda abrindo. O print `caso-04-b-remover-com-leituras-409.png` é do
+  comportamento **anterior** (remoção física) e fica no repositório como histórico, não como evidência
+  atual.
 
 ## Caso 9 — relatório em PDF (acrescentado depois da rodada)
 
@@ -147,16 +153,18 @@ e os prints desta rodada.
 
 ## Testes automatizados (xUnit)
 
-Os casos 5 e 6 do plano também rodam como testes automatizados, sem banco e sem HTTP, em
-`tests/FrioSolidario.Tests` (`dotnet test`). O que o plano executa a mão pela API roda em
-milissegundos a cada build.
+Os casos 5, 6 e o 401 do caso 7 do plano também rodam como testes automatizados, sem banco, em
+`tests/FrioSolidario.Tests` (`dotnet test`): regra pura, serviço e API de verdade
+(`WebApplicationFactory` = TestServer, com os repositórios em memória). O que o plano executa a mão pela
+API roda em milissegundos a cada build.
 
 | Arquivo | Testes | O que cobre |
 |---|---|---|
 | `RegraDeAlertaTests.cs` | 25 (13 métodos, 5 parametrizados) | a regra pura: 1 ou 2 leituras fora da faixa não abrem alerta; a sequência do plano; os limites exatos (-18 e -25) que não contam; 3 leituras abrem `TEMP_ALTA`/`TEMP_BAIXA`; severidade por desvio com os limites 1,5 e 3,0; a faixa vem do equipamento; a ordem de entrada não importa |
 | `LeituraServiceTests.cs` | 4 | o fluxo do `POST /api/leituras` com repositórios em memória: a 3ª leitura abre 1 alerta e a resposta o traz; a 4ª não duplica; equipamento que já tem alerta aberto não ganha outro; resolvido o alerta, uma nova sequência abre outro |
+| `ApiTests.cs` | 5 | a API por HTTP (TestServer): `POST /api/leituras` sem token 401; a sequência do caso 5 não abre alerta; a 3ª leitura de 7,8 °C abre `TEMP_ALTA`/`CRITICA` e a 4ª não duplica; `/instituicoes/{id}/equipamentos` da própria instituição 200 e de outra 403; `DELETE` desativa (`ativo: false`) preservando a leitura e repete em 409 |
 
-**Resultado:** 29 testes, 0 falhas (a contagem inclui as variações dos testes parametrizados). Rodam em
+**Resultado:** 34 testes, 0 falhas (a contagem inclui as variações dos testes parametrizados). Rodam em
 `dotnet test FrioSolidario.slnx`, ou por caso: `--filter Caso=5` e `--filter Caso=6`.
 
 **Os testes pegam defeitos?** Para saber se eles protegem a regra, e não só passam, introduzi 10 defeitos

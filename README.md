@@ -15,7 +15,7 @@ src/
 ├── FrioSolidario.Infrastructure/  # implementação dos repositórios (banco, MQTT)
 └── FrioSolidario.Api/             # controllers, Swagger, injeção de dependência
 tests/
-└── FrioSolidario.Tests/           # testes xUnit da regra de alerta (sem banco e sem HTTP)
+└── FrioSolidario.Tests/           # testes xUnit: regra pura, serviço e API via TestServer (sem banco)
 ```
 
 O fluxo é sempre **Controller → Service → Repository**: o controller não conhece banco, o serviço não
@@ -47,7 +47,8 @@ Postgres está fora do ar ou o schema não foi carregado, a API não quebra — 
 
 ## Testes automatizados
 
-Os casos 5 e 6 do plano de testes (`docs/plano-de-testes.md`) rodam em xUnit, sem banco e sem HTTP:
+Os casos 5, 6 e 7 do plano de testes (`docs/plano-de-testes.md`) rodam em xUnit, sem banco: regra pura,
+serviço e **API de verdade** (`WebApplicationFactory` = TestServer, com os repositórios em memória).
 
 ```bash
 dotnet test
@@ -55,10 +56,12 @@ dotnet test --filter Caso=5   # menos de 3 leituras fora da faixa não abrem ale
 dotnet test --filter Caso=6   # 3 leituras seguidas abrem 1 alerta, sem duplicar
 ```
 
-São 29 testes em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
-severidade por desvio) e o fluxo do `POST /api/leituras` com repositórios em memória
-(`LeituraServiceTests`: um alerta aberto por tipo, sem duplicar). Os demais casos do plano (login,
-perfis, CRUD, segurança, relatório) são verificados por chamada real, com evidência em `docs/`.
+São **34 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
+severidade por desvio), o fluxo do `POST /api/leituras` com repositórios em memória
+(`LeituraServiceTests`: um alerta aberto por tipo, sem duplicar) e a API por HTTP (`ApiTests`: 401 sem
+token, casos 5 e 6, a rota `/instituicoes/{id}/equipamentos` e o DELETE lógico do equipamento). Os
+demais casos do plano (login, perfis, segurança, relatório) são verificados por chamada real, com
+evidência em `docs/`.
 
 ## Login (demo)
 
@@ -121,6 +124,7 @@ equipamento no cadastro muda o comportamento sem tocar em código.
 | GET | `/api/health` | status da API + quantos equipamentos existem no banco (pública) |
 | GET | `/api/instituicoes` | lista todas as instituições em ordem alfabética |
 | GET | `/api/instituicoes/{id}` | busca uma instituição (404 se não existe) |
+| GET | `/api/instituicoes/{id}/equipamentos` | equipamentos de uma instituição (403 se não for a do token) |
 | POST | `/api/instituicoes` | cadastra — `ADMIN` (CNPJ com 14 dígitos, sem pontuação; 409 se repetido) |
 | PUT | `/api/instituicoes/{id}` | atualiza — `ADMIN`, só a própria instituição |
 | DELETE | `/api/instituicoes/{id}` | remove — `ADMIN`, só a própria (409 se tiver equipamentos/usuários/lotes) |
@@ -128,7 +132,7 @@ equipamento no cadastro muda o comportamento sem tocar em código.
 | GET | `/api/equipamentos/{id}` | busca um equipamento da instituição do token |
 | POST | `/api/equipamentos` | cadastra — `ADMIN`, na própria instituição (temp_min < temp_max, umidade até 100) |
 | PUT | `/api/equipamentos/{id}` | atualiza — `ADMIN`, sem trocar de instituição |
-| DELETE | `/api/equipamentos/{id}` | remove — `ADMIN` (409 se tiver leituras/alertas) |
+| DELETE | `/api/equipamentos/{id}` | **desativa** o equipamento — `ADMIN`; 204 e `ativo: false`, leituras e alertas continuam no banco (409 se já está desativado) |
 | POST | `/api/auth/login` | autentica e devolve o token (pública; 10 tentativas/min por IP) |
 | POST | `/api/leituras` | registra leitura do sensor e devolve os alertas que ela abriu |
 | GET | `/api/equipamentos/{id}/leituras?periodo=24h\|7d` | série do gráfico (24h por padrão) |
@@ -146,6 +150,9 @@ do texto volta 400. A grafia do nome é aceita em qualquer caixa (`"CAMARA"` e `
 mesmo): quem manda é o vocabulário, não as maiúsculas/minúsculas. Erros voltam em `ProblemDetails`: 400 regra de negócio/validação, 401
 credenciais ou token ausente/inválido/expirado, 403 perfil sem permissão ou recurso de outra
 instituição, 404 não encontrado, 409 conflito com o estado do banco, 429 tentativas de login demais.
+
+Limites físicos aceitos (os mesmos `CHECK` do schema): temperatura de **-40 a 80 °C** e umidade de
+**0 a 100 %**. Fora disso é 400 de validação, antes de chegar ao banco.
 
 ## Segurança
 
@@ -275,7 +282,7 @@ Com `localhost:5199` a API só responde na própria máquina — é a causa nº 
 | Segurança (JWT, validação, anti-SQLi, anti-XSS) | pronto — todas as rotas com token, isolamento por instituição, limite no login, cabeçalhos de segurança; ver seção "Segurança" |
 | Leituras (ingestão + série) | pronto — `POST /api/leituras` (201) e `GET /api/equipamentos/{id}/leituras?periodo=24h\|7d` |
 | Regra de faixa → alerta | pronto — 3 leituras seguidas fora da faixa, porta aberta por tempo, severidade por desvio; `GET /api/alertas` e `PATCH /api/alertas/{id}/resolver` |
-| Testes automatizados (xUnit) | pronto — casos 5 e 6 do plano (regra de alerta): 29 testes em `tests/FrioSolidario.Tests`, `dotnet test` |
+| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **34 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
 | App mobile | Kevin |
 | IoT (MQTT) | Roger — o comando do Mosquitto e o script do sensor entram no README quando ele fechar (16/11) |
@@ -303,7 +310,7 @@ instituição real foi usada; os dados do projeto são fictícios.
 |---|---|---|
 | App mobile | não iniciado no repositório da API | Kevin |
 | Sensor MQTT publicando ao vivo | script de simulação previsto para 10/11; a API já aceita `POST /api/leituras` | Roger |
-| Testes automatizados (xUnit) abrangentes | só a regra de alerta (casos 5 e 6) tem testes; login, perfis, CRUD, segurança e relatório são verificados por chamada real, com evidência em `docs/` | Arthur |
+| Testes automatizados (xUnit) abrangentes | os casos 5, 6 e o 401 do caso 7 rodam sem banco (regra, serviço e API via TestServer); login com BCrypt, perfis, CRUD restante e relatório seguem verificados por chamada real, com evidência em `docs/` | Arthur |
 | HTTPS | a demo roda em HTTP na rede local (`:5199`); em produção a API ficaria atrás de TLS | grupo |
 | Chave do JWT | o `appsettings.json` traz uma chave de desenvolvimento; fora da demo, defina `Jwt__Key` | grupo |
 | Administrador do sistema | não há papel acima de `ADMIN`: qualquer `ADMIN` pode cadastrar instituição nova (alterar e remover, só a própria) | grupo |

@@ -15,7 +15,7 @@ namespace FrioSolidario.Api.Controllers;
 [Authorize]
 [Route("api/instituicoes")]
 [Produces("application/json")]
-public sealed class InstituicoesController(IInstituicaoService servico) : ControllerBase
+public sealed class InstituicoesController(IInstituicaoService servico, IEquipamentoService equipamentos) : ControllerBase
 {
     /// <summary>Lista todas as instituicoes em ordem alfabetica.</summary>
     [HttpGet]
@@ -32,6 +32,17 @@ public sealed class InstituicoesController(IInstituicaoService servico) : Contro
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<InstituicaoResponse>> Obter(long id, CancellationToken cancellationToken)
         => Ok(await servico.ObterAsync(id, cancellationToken));
+
+    /// <summary>Lista os equipamentos de uma instituicao.</summary>
+    /// <response code="403">Instituicao de outro usuario.</response>
+    [HttpGet("{id:long}/equipamentos")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(IReadOnlyList<EquipamentoResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<EquipamentoResponse>>> ListarEquipamentos(
+        long id,
+        CancellationToken cancellationToken)
+        => Ok(await equipamentos.ListarAsync(id, User.InstituicaoObrigatoria(), cancellationToken));
 
     /// <summary>Cadastra uma instituicao. CNPJ vai sem pontuacao e nao pode repetir.</summary>
     /// <response code="409">CNPJ ja cadastrado.</response>

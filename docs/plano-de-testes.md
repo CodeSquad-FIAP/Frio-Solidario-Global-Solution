@@ -77,6 +77,13 @@ Convenções: `{{token-X}}` é o token devolvido pelo login do usuário X (caso 
 
 ---
 
+**Resultado em 11/11/2026** (API + PostgreSQL 17.11, seed recarregado): **9 de 9 casos passaram** —
+1 (5/5), 2 (7/7), 3 (6/6), 4 (7/7), 5 (7/7), 6 (6/6), 7 (13/13), 8 (7/7), 9 (9/9). O caso 4 foi
+reexecutado depois que o `DELETE` passou a desativar o equipamento em vez de apagar. Detalhe dos passos
+em `execucao-dos-testes.md`.
+
+---
+
 ### Caso 1 — Login com senha protegida por BCrypt
 
 | | |
@@ -149,7 +156,7 @@ mostrando que o equipamento está intacto.
 
 | | |
 |---|---|
-| **Verifica** | README, "Endpoints": PUT, DELETE (409 com leituras) e `GET /api/equipamentos/{id}/leituras` |
+| **Verifica** | README, "Endpoints": PUT, DELETE lógico (desativa e preserva o histórico) e `GET /api/equipamentos/{id}/leituras` |
 | **Pré-condição** | Caso 3 executado (equipamento 7 existe); `{{token-mariana}}` |
 | **Automação** | Execução manual |
 
@@ -159,9 +166,9 @@ mostrando que o equipamento está intacto.
 | 2 | `GET /api/equipamentos/7` | **200**, mostra a faixa nova |
 | 3 | `GET /api/equipamentos/1/leituras?periodo=24h` | **200**, **5 leituras** em ordem cronológica (a mais antiga primeiro), cada uma com `temperatura`, `umidade`, `portaAberta`, `registradaEm` e `origem` |
 | 4 | `GET /api/equipamentos/1/leituras?periodo=1h` | **400** ("periodo aceita apenas 24h ou 7d.") |
-| 5 | `DELETE /api/equipamentos/1` (tem leituras e alerta) | **409**. O equipamento 1 continua na lista |
-| 6 | `DELETE /api/equipamentos/7` (sem leituras) | **204** |
-| 7 | `GET /api/equipamentos/7` | **404** |
+| 5 | `DELETE /api/equipamentos/1` (tem leituras e alerta) | **204**. O equipamento **não sai da lista**: `GET /api/equipamentos/1` devolve **200** com `ativo: false`, e as leituras e o alerta continuam no banco (o log térmico não perde histórico) |
+| 6 | `DELETE /api/equipamentos/7` (sem leituras) | **204** (também desativa, não apaga) |
+| 7 | `GET /api/equipamentos/7` | **200** com `ativo: false`; repetir o `DELETE` no 7 devolve **409** (`"Equipamento 7 ja esta desativado."`) |
 
 **Evidência:** respostas dos passos 3, 5, 6 e 7; no passo 3, o painel do app com o gráfico, se
 disponível.

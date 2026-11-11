@@ -69,9 +69,12 @@ public sealed class EquipamentosController(IEquipamentoService servico) : Contro
         CancellationToken cancellationToken)
         => Ok(await servico.AtualizarAsync(id, request, User.InstituicaoObrigatoria(), cancellationToken));
 
-    /// <summary>Remove um equipamento sem leituras nem alertas vinculados.</summary>
+    /// <summary>
+    /// Desativa o equipamento (DELETE e logico): as leituras e os alertas antigos continuam no banco,
+    /// porque o log termico da vigilancia sanitaria nao pode perder historico.
+    /// </summary>
     /// <response code="403">Usuario nao e ADMIN ou equipamento de outra instituicao.</response>
-    /// <response code="409">Equipamento possui leituras ou alertas (FK ON DELETE RESTRICT).</response>
+    /// <response code="409">Equipamento ja esta desativado.</response>
     [HttpDelete("{id:long}")]
     [Authorize(Roles = nameof(PapelUsuario.ADMIN))]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]

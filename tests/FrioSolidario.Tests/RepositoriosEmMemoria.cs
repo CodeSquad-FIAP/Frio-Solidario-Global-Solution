@@ -99,10 +99,4 @@ internal sealed class EquipamentosEmMemoria(params Equipamento[] equipamentos) :
     }
 
     public Task AtualizarAsync(Equipamento equipamento, CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-    public Task RemoverAsync(Equipamento equipamento, CancellationToken cancellationToken = default)
-    {
-        _itens.Remove(equipamento);
-        return Task.CompletedTask;
-    }
 }

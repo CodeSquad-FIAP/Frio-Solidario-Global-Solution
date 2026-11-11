@@ -98,6 +98,10 @@ public sealed class EquipamentoService(
         return EquipamentoResponse.De(equipamento, instituicao?.Nome ?? string.Empty);
     }
 
+    /// <summary>
+    /// Desativa o equipamento em vez de apagar: leitura e alerta antigos precisam sobreviver para o
+    /// log termico da vigilancia sanitaria. Equipamento ja desativado e 409, como alerta ja resolvido.
+    /// </summary>
     public async Task RemoverAsync(
         long id,
         long? instituicaoDoToken = null,
@@ -108,7 +112,13 @@ public sealed class EquipamentoService(
 
         GarantirDoUsuario(encontrado.Equipamento.InstituicaoId, id, instituicaoDoToken);
 
-        await equipamentos.RemoverAsync(encontrado.Equipamento, cancellationToken);
+        if (!encontrado.Equipamento.Ativo)
+        {
+            throw new ConflitoException($"Equipamento {id} ja esta desativado.");
+        }
+
+        encontrado.Equipamento.Ativo = false;
+        await equipamentos.AtualizarAsync(encontrado.Equipamento, cancellationToken);
     }
 
     private static void GarantirDoUsuario(long instituicaoDoEquipamento, long id, long? instituicaoDoToken)

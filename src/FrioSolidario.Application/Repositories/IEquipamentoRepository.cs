@@ -18,6 +18,4 @@ public interface IEquipamentoRepository
     Task<Equipamento> AdicionarAsync(Equipamento equipamento, CancellationToken cancellationToken = default);
 
     Task AtualizarAsync(Equipamento equipamento, CancellationToken cancellationToken = default);
-
-    Task RemoverAsync(Equipamento equipamento, CancellationToken cancellationToken = default);
 }
