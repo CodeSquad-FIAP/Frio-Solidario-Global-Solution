@@ -1,4 +1,5 @@
 using System.Text;
+using FrioSolidario.Application.Common;
 using FrioSolidario.Application.Security;
 
 namespace FrioSolidario.Infrastructure.Security;
@@ -22,10 +23,16 @@ public sealed class BcryptPasswordHasher : IPasswordHasher
     public string Gerar(string senha)
     {
         // Senha vazia gerando hash valido seria uma conta com senha "adivinhavel": falha cedo.
-        ArgumentException.ThrowIfNullOrWhiteSpace(senha);
+        // RegraDeNegocioException (e nao ArgumentException) porque isto e regra de senha, nao defeito
+        // de programacao: o middleware traduz em 400 e o cliente recebe a mensagem, em vez de 500.
+        if (string.IsNullOrWhiteSpace(senha))
+        {
+            throw new RegraDeNegocioException("Senha nao pode ser vazia.");
+        }
+
         if (Encoding.UTF8.GetByteCount(senha) > BytesMaximos)
         {
-            throw new ArgumentException($"Senha passa de {BytesMaximos} bytes, o limite do BCrypt.", nameof(senha));
+            throw new RegraDeNegocioException($"Senha passa de {BytesMaximos} bytes, o limite do BCrypt.");
         }
 
         return BCrypt.Net.BCrypt.HashPassword(senha, WorkFactor);

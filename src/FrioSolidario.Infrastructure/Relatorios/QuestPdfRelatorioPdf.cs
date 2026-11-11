@@ -1,3 +1,4 @@
+using System.Globalization;
 using FrioSolidario.Application.Relatorios;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -34,7 +35,7 @@ public sealed class QuestPdfRelatorioPdf : IRelatorioPdf
                     cabecalho.Item().Text(
                         $"Faixa: {dados.TempMin:0.0} C a {dados.TempMax:0.0} C | Umidade maxima: {dados.UmidMax:0.0}%");
                     cabecalho.Item().Text(
-                        $"Periodo: {dados.De:dd/MM/yyyy HH:mm} a {dados.Ate:dd/MM/yyyy HH:mm}");
+                        $"Periodo (horario de Brasilia): {Hora(dados.De)} a {Hora(dados.Ate)}");
                     cabecalho.Item().PaddingBottom(8).Text($"Emitido em {DateTimeOffset.Now:dd/MM/yyyy HH:mm}");
                 });
 
@@ -100,7 +101,7 @@ public sealed class QuestPdfRelatorioPdf : IRelatorioPdf
         foreach (var leitura in dados.Leituras)
         {
             var fundo = leitura.ForaDaFaixa ? Colors.Red.Lighten4 : Colors.White;
-            tabela.Cell().Background(fundo).Padding(3).Text($"{leitura.RegistradaEm:dd/MM/yyyy HH:mm}");
+            tabela.Cell().Background(fundo).Padding(3).Text(Hora(leitura.RegistradaEm));
             tabela.Cell().Background(fundo).Padding(3).Text($"{leitura.Temperatura:0.0} C");
             tabela.Cell().Background(fundo).Padding(3).Text($"{leitura.Umidade:0.0}%");
             tabela.Cell().Background(fundo).Padding(3).Text(leitura.PortaAberta ? "Aberta" : "Fechada");
@@ -131,13 +132,20 @@ public sealed class QuestPdfRelatorioPdf : IRelatorioPdf
 
         foreach (var alerta in dados.Alertas)
         {
-            tabela.Cell().Padding(3).Text($"{alerta.CriadoEm:dd/MM/yyyy HH:mm}");
+            tabela.Cell().Padding(3).Text(Hora(alerta.CriadoEm));
             tabela.Cell().Padding(3).Text(alerta.Tipo.ToString());
             tabela.Cell().Padding(3).Text(alerta.Severidade.ToString());
             tabela.Cell().Padding(3).Text(alerta.Status.ToString());
             tabela.Cell().Padding(3).Text(alerta.ResolvidoEm is null
                 ? "-"
-                : $"{alerta.ResolvidoEm:dd/MM/yyyy HH:mm}");
+                : Hora(alerta.ResolvidoEm.Value));
         }
     };
+
+    /// <summary>
+    /// Instante no fuso do projeto antes de virar texto. Sem isso o PDF imprime o valor UTC que veio
+    /// do banco: a leitura das 18:01 aparecia como 21:01 e o periodo terminava no dia seguinte.
+    /// </summary>
+    private static string Hora(DateTimeOffset instante) =>
+        FusoDoProjeto.Local(instante).ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture);
 }

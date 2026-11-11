@@ -117,7 +117,7 @@ equipamento no cadastro muda o comportamento sem tocar em código.
 | GET | `/api/equipamentos/{id}/leituras?periodo=24h\|7d` | série do gráfico (24h por padrão) |
 | GET | `/api/alertas?status=ABERTO&equipamentoId=` | fila de alertas da instituição do token, mais grave primeiro |
 | PATCH | `/api/alertas/{id}/resolver` | resolve o alerta com o usuário do token (só da própria instituição) |
-| GET | `/api/equipamentos/{id}/relatorio?de=&ate=` | log térmico em PDF (7 dias por padrão, até 92 dias) |
+| GET | `/api/equipamentos/{id}/relatorio?de=&ate=` | log térmico em PDF (7 dias por padrão, até 92 dias; horários em horário de Brasília) |
 
 Só `/api/auth/login`, `/api/health` e o Swagger são públicos; **todas as outras rotas exigem
 `Authorization: Bearer <token>`** (a API é fechada por padrão: rota nova nasce protegida). No CRUD
@@ -125,7 +125,8 @@ de instituições e equipamentos, as **escritas (POST, PUT, DELETE) exigem o pap
 token vem 401 e com token de `VOLUNTARIO` vem 403.
 
 Os enums trafegam como texto (`CAMARA`, `MERCADO`, `ABERTO`), nunca como número — número no lugar
-do texto volta 400. Erros voltam em `ProblemDetails`: 400 regra de negócio/validação, 401
+do texto volta 400. A grafia do nome é aceita em qualquer caixa (`"CAMARA"` e `"camara"` valem o
+mesmo): quem manda é o vocabulário, não o maiúsculas/minúsculas. Erros voltam em `ProblemDetails`: 400 regra de negócio/validação, 401
 credenciais ou token ausente/inválido/expirado, 403 perfil sem permissão ou recurso de outra
 instituição, 404 não encontrado, 409 conflito com o estado do banco, 429 tentativas de login demais.
 

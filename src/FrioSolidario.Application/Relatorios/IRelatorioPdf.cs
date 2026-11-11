@@ -40,3 +40,32 @@ public interface IRelatorioPdf
 {
     byte[] Gerar(RelatorioDados dados);
 }
+
+/// <summary>
+/// Fuso do projeto, num lugar so. A operacao e em Sao Paulo e o PDF do log e um documento impresso
+/// para a equipe local: exibir em UTC deixaria o horario 3h adiantado e o "ate" no dia seguinte.
+/// Fixo em America/Sao_Paulo (e nao <c>TimeZoneInfo.Local</c>) para o documento sair igual rodando no
+/// Windows ou num container cujo fuso padrao e UTC.
+/// </summary>
+public static class FusoDoProjeto
+{
+    public static readonly TimeZoneInfo SaoPaulo = Resolver();
+
+    /// <summary>Mesmo instante, no fuso em que o relatorio e lido e impresso.</summary>
+    public static DateTimeOffset Local(DateTimeOffset instante) =>
+        TimeZoneInfo.ConvertTime(instante, SaoPaulo);
+
+    private static TimeZoneInfo Resolver()
+    {
+        try
+        {
+            // Ids IANA funcionam no Linux e, desde o .NET 6, tambem no Windows (via ICU).
+            return TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+        }
+        catch (Exception excecao) when (excecao is TimeZoneNotFoundException or InvalidTimeZoneException)
+        {
+            // Nome do registro do Windows: so chega aqui num host sem o banco de fusos IANA.
+            return TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time");
+        }
+    }
+}

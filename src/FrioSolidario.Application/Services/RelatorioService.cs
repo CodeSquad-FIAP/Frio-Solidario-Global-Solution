@@ -40,7 +40,8 @@ public sealed class RelatorioService(
             throw new AcessoNegadoException($"Equipamento {equipamentoId} pertence a outra instituicao.");
         }
 
-        var hoje = DateOnly.FromDateTime(DateTime.Now);
+        // O "hoje" e o do fuso do projeto: o relatorio e pedido e lido em Brasilia, nao em UTC.
+        var hoje = DateOnly.FromDateTime(FusoDoProjeto.Local(DateTimeOffset.Now).DateTime);
         var inicio = de ?? hoje.AddDays(-DiasPadrao);
         var fim = ate ?? hoje;
 
@@ -95,10 +96,11 @@ public sealed class RelatorioService(
         leitura.Umidade > equipamento.UmidMax;
 
     /// <summary>
-    /// DateOnly no fuso do servidor vira instante UTC: o Npgsql recusa DateTimeOffset com offset
+    /// DateOnly no fuso do projeto vira instante UTC: o Npgsql recusa DateTimeOffset com offset
     /// diferente de zero em coluna timestamptz (o banco guarda UTC e converte na leitura).
     /// </summary>
     private static DateTimeOffset ParaInstante(DateOnly data) =>
-        new DateTimeOffset(data.ToDateTime(TimeOnly.MinValue), TimeZoneInfo.Local.GetUtcOffset(data.ToDateTime(TimeOnly.MinValue)))
-            .ToUniversalTime();
+        new DateTimeOffset(
+            data.ToDateTime(TimeOnly.MinValue),
+            FusoDoProjeto.SaoPaulo.GetUtcOffset(data.ToDateTime(TimeOnly.MinValue))).ToUniversalTime();
 }
