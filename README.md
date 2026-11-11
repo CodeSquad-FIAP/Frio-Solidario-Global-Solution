@@ -126,7 +126,7 @@ token vem 401 e com token de `VOLUNTARIO` vem 403.
 
 Os enums trafegam como texto (`CAMARA`, `MERCADO`, `ABERTO`), nunca como número — número no lugar
 do texto volta 400. A grafia do nome é aceita em qualquer caixa (`"CAMARA"` e `"camara"` valem o
-mesmo): quem manda é o vocabulário, não o maiúsculas/minúsculas. Erros voltam em `ProblemDetails`: 400 regra de negócio/validação, 401
+mesmo): quem manda é o vocabulário, não as maiúsculas/minúsculas. Erros voltam em `ProblemDetails`: 400 regra de negócio/validação, 401
 credenciais ou token ausente/inválido/expirado, 403 perfil sem permissão ou recurso de outra
 instituição, 404 não encontrado, 409 conflito com o estado do banco, 429 tentativas de login demais.
 
@@ -148,7 +148,7 @@ Cada linha foi conferida rodando a API contra o banco do seed (PostgreSQL 17.11)
 | Resposta interpretada como página | `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'` (fora do Swagger), `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cache-Control: no-store` em `/api`; sem cabeçalho `Server` | cabeçalhos de qualquer resposta de `/api` |
 | Dado fora do vocabulário | Enum só por nome (`"FREEZER"`), validação dos DTOs (tamanho, faixa, CNPJ) antes do serviço | `"tipo": 2` → 400 |
 | Requisição cara de atender | Relatório limitado a 92 dias por pedido | `de=2026-01-01&ate=2026-11-10` → 400 |
-| Senha truncada em silêncio | `IPasswordHasher.Gerar` recusa senha acima de 72 bytes (limite do BCrypt) | — (sem cadastro de usuário na API ainda) |
+| Senha truncada em silêncio | `IPasswordHasher.Gerar` recusa senha vazia ou acima de 72 bytes (limite do BCrypt) com `RegraDeNegocioException`, que a API devolve como 400 | — (sem cadastro de usuário na API ainda) |
 
 ## Contrato para o app (Kevin)
 
