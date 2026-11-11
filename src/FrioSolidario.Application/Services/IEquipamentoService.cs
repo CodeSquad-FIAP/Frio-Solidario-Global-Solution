@@ -11,6 +11,7 @@ public interface IEquipamentoService
     Task<IReadOnlyList<EquipamentoResponse>> ListarAsync(
         long? instituicaoId = null,
         long? instituicaoDoToken = null,
+        bool? ativo = null,
         CancellationToken cancellationToken = default);
 
     Task<EquipamentoResponse> ObterAsync(

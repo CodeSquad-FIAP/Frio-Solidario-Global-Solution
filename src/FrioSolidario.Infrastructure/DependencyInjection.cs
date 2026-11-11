@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<ILeituraRepository, LeituraRepository>();
         services.AddScoped<IAlertaRepository, AlertaRepository>();
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+        services.AddScoped<ILoteRepository, LoteRepository>();
 
         // Seguranca: BCrypt para conferir senha e JWT para o token de acesso do app.
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.Secao));

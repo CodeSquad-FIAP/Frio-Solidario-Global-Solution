@@ -17,6 +17,7 @@ public sealed class EquipamentoService(
     public async Task<IReadOnlyList<EquipamentoResponse>> ListarAsync(
         long? instituicaoId = null,
         long? instituicaoDoToken = null,
+        bool? ativo = null,
         CancellationToken cancellationToken = default)
     {
         if (instituicaoId is not null)
@@ -27,7 +28,7 @@ public sealed class EquipamentoService(
                 $"Instituicao {instituicaoId} nao e a instituicao do usuario.");
         }
 
-        var lista = await equipamentos.ListarAsync(instituicaoId ?? instituicaoDoToken, cancellationToken);
+        var lista = await equipamentos.ListarAsync(instituicaoId ?? instituicaoDoToken, ativo, cancellationToken);
         return lista.Select(item => EquipamentoResponse.De(item.Equipamento, item.Instituicao)).ToList();
     }
 

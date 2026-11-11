@@ -10,12 +10,14 @@ public sealed class EquipamentoRepository(FrioSolidarioDbContext contexto) : IEq
 {
     public async Task<IReadOnlyList<(Equipamento Equipamento, string Instituicao)>> ListarAsync(
         long? instituicaoId = null,
+        bool? ativo = null,
         CancellationToken cancellationToken = default)
     {
         var consulta =
             from e in contexto.Equipamentos.AsNoTracking()
             join i in contexto.Instituicoes.AsNoTracking() on e.InstituicaoId equals i.Id
             where instituicaoId == null || e.InstituicaoId == instituicaoId
+            where ativo == null || e.Ativo == ativo
             orderby i.Nome, e.Nome
             select new { Equipamento = e, Instituicao = i.Nome };
 

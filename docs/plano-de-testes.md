@@ -320,6 +320,10 @@ do passo 4, que é o que prova o fuso.
 - **Token vencido:** o token vale 8 h e esperar isso não cabe numa execução manual. O plano cobre
   o token adulterado (caso 7, passo 2); o token expirado foi verificado na auditoria do card de
   segurança, com um token gerado já vencido.
+- **Lotes doados (`/api/lotes`):** cadastro, listagem e retirada foram feitos para a tela do app
+  (Kevin), mas **não** entram nos 9 casos deste plano. Verificação: `dotnet test` cobre o contrato
+  (`Lotes_CadastraDisponivel_RegistraRetiradaENaoRepete`, `Lotes_VoluntarioNaoCadastraELoteDeOutraInstituicao_403`)
+  e a chamada real com o seed devolve os 4 lotes da instituição 1.
 - **Carga e desempenho** e **HTTPS** não fazem parte da entrega.
 - **Health check (`/api/health`):** é infraestrutura, não promessa de produto — responde 200 sem token e
   é exercitado indiretamente em toda execução. Não vira caso.

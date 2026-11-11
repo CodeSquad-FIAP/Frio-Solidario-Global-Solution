@@ -41,8 +41,9 @@ public sealed class InstituicoesController(IInstituicaoService servico, IEquipam
     [ProducesResponseType(typeof(IReadOnlyList<EquipamentoResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<EquipamentoResponse>>> ListarEquipamentos(
         long id,
+        [FromQuery] bool? ativo,
         CancellationToken cancellationToken)
-        => Ok(await equipamentos.ListarAsync(id, User.InstituicaoObrigatoria(), cancellationToken));
+        => Ok(await equipamentos.ListarAsync(id, User.InstituicaoObrigatoria(), ativo, cancellationToken));
 
     /// <summary>Cadastra uma instituicao. CNPJ vai sem pontuacao e nao pode repetir.</summary>
     /// <response code="409">CNPJ ja cadastrado.</response>

@@ -56,7 +56,7 @@ dotnet test --filter Caso=5   # menos de 3 leituras fora da faixa não abrem ale
 dotnet test --filter Caso=6   # 3 leituras seguidas abrem 1 alerta, sem duplicar
 ```
 
-São **34 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
+São **37 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
 severidade por desvio), o fluxo do `POST /api/leituras` com repositórios em memória
 (`LeituraServiceTests`: um alerta aberto por tipo, sem duplicar) e a API por HTTP (`ApiTests`: 401 sem
 token, casos 5 e 6, a rota `/instituicoes/{id}/equipamentos` e o DELETE lógico do equipamento). Os
@@ -124,11 +124,11 @@ equipamento no cadastro muda o comportamento sem tocar em código.
 | GET | `/api/health` | status da API + quantos equipamentos existem no banco (pública) |
 | GET | `/api/instituicoes` | lista todas as instituições em ordem alfabética |
 | GET | `/api/instituicoes/{id}` | busca uma instituição (404 se não existe) |
-| GET | `/api/instituicoes/{id}/equipamentos` | equipamentos de uma instituição (403 se não for a do token) |
+| GET | `/api/instituicoes/{id}/equipamentos` | equipamentos de uma instituição (`?ativo=`, 403 se não for a do token) |
 | POST | `/api/instituicoes` | cadastra — `ADMIN` (CNPJ com 14 dígitos, sem pontuação; 409 se repetido) |
 | PUT | `/api/instituicoes/{id}` | atualiza — `ADMIN`, só a própria instituição |
 | DELETE | `/api/instituicoes/{id}` | remove — `ADMIN`, só a própria (409 se tiver equipamentos/usuários/lotes) |
-| GET | `/api/equipamentos?instituicaoId=` | lista os equipamentos da instituição do token (`instituicaoId` opcional; de outra = 403) |
+| GET | `/api/equipamentos?instituicaoId=&ativo=` | lista os equipamentos da instituição do token (`instituicaoId` opcional, de outra = 403; `ativo=true` esconde os desativados) |
 | GET | `/api/equipamentos/{id}` | busca um equipamento da instituição do token |
 | POST | `/api/equipamentos` | cadastra — `ADMIN`, na própria instituição (temp_min < temp_max, umidade até 100) |
 | PUT | `/api/equipamentos/{id}` | atualiza — `ADMIN`, sem trocar de instituição |
@@ -138,6 +138,10 @@ equipamento no cadastro muda o comportamento sem tocar em código.
 | GET | `/api/equipamentos/{id}/leituras?periodo=24h\|7d` | série do gráfico (24h por padrão) |
 | GET | `/api/alertas?status=ABERTO&equipamentoId=` | fila de alertas da instituição do token, mais grave primeiro |
 | PATCH | `/api/alertas/{id}/resolver` | resolve o alerta com o usuário do token (só da própria instituição) |
+| GET | `/api/lotes?status=` | lotes doados da instituição do token, por validade (o que vence primeiro) |
+| GET | `/api/lotes/{id}` | busca um lote (403 se for de outra instituição) |
+| POST | `/api/lotes` | cadastra lote doado — `ADMIN`; nasce `DISPONIVEL` (descrição, categoria, kg, validade) |
+| PATCH | `/api/lotes/{id}/retirada` | registra a saída — `ADMIN`: `DISTRIBUIDO` ou `PERDIDO`, grava `retiradoEm` (409 se já saiu) |
 | GET | `/api/equipamentos/{id}/relatorio?de=&ate=` | log térmico em PDF (7 dias por padrão, até 92 dias; horários em horário de Brasília) |
 
 Só `/api/auth/login`, `/api/health` e o Swagger são públicos; **todas as outras rotas exigem
@@ -204,6 +208,14 @@ Ordem que o app segue, com o corpo real de cada resposta (medido rodando a API):
    (`Content-Type: application/pdf`, nome do arquivo em `Content-Disposition`). Salve os bytes em cache e
    abra com a folha de compartilhamento/impressão do Android. `de`/`ate` são opcionais (padrão: últimos
    7 dias, fim inclusivo no dia).
+7. Lote doado (tela de cadastro): `POST /api/lotes` com `{"descricao":"...","categoria":"HORTIFRUTI",
+   "kg":120.5,"validade":"2026-11-20"}` → **201** com `id`, `status` `DISPONIVEL` e `instituicaoId` do
+   token. A categoria vai como o app mandar e o servidor grava em maiúsculas. Lista com
+   `GET /api/lotes?status=DISPONIVEL` (já ordenada pela validade) e saída do estoque com
+   `PATCH /api/lotes/{id}/retirada` `{"status":"DISTRIBUIDO"}` → 200; repetir devolve 409.
+
+Para o painel, use `GET /api/equipamentos?ativo=true`: equipamento removido é **desativado**, não
+apagado (o histórico do log térmico fica), então sem o filtro a lista traz os inativos com `ativo: false`.
 
 Detalhes que evitam retrabalho no app: enums trafegam em texto (`CAMARA`, `TEMP_ALTA`, `ABERTO`); datas
 vêm em ISO 8601 **UTC** (`+00:00`) e precisam ser convertidas para o fuso do aparelho na exibição; 401
@@ -282,8 +294,9 @@ Com `localhost:5199` a API só responde na própria máquina — é a causa nº 
 | Segurança (JWT, validação, anti-SQLi, anti-XSS) | pronto — todas as rotas com token, isolamento por instituição, limite no login, cabeçalhos de segurança; ver seção "Segurança" |
 | Leituras (ingestão + série) | pronto — `POST /api/leituras` (201) e `GET /api/equipamentos/{id}/leituras?periodo=24h\|7d` |
 | Regra de faixa → alerta | pronto — 3 leituras seguidas fora da faixa, porta aberta por tempo, severidade por desvio; `GET /api/alertas` e `PATCH /api/alertas/{id}/resolver` |
-| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **34 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
+| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **37 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
+| Lotes doados | pronto — `/api/lotes` (lista, busca, cadastro e retirada), sempre na instituição do token; alimenta os indicadores de kg doados e perda |
 | App mobile | Kevin |
 | IoT (MQTT) | Roger — o comando do Mosquitto e o script do sensor entram no README quando ele fechar (16/11) |
 

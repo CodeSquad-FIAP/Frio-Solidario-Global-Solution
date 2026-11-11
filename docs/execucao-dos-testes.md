@@ -162,9 +162,9 @@ API roda em milissegundos a cada build.
 |---|---|---|
 | `RegraDeAlertaTests.cs` | 25 (13 métodos, 5 parametrizados) | a regra pura: 1 ou 2 leituras fora da faixa não abrem alerta; a sequência do plano; os limites exatos (-18 e -25) que não contam; 3 leituras abrem `TEMP_ALTA`/`TEMP_BAIXA`; severidade por desvio com os limites 1,5 e 3,0; a faixa vem do equipamento; a ordem de entrada não importa |
 | `LeituraServiceTests.cs` | 4 | o fluxo do `POST /api/leituras` com repositórios em memória: a 3ª leitura abre 1 alerta e a resposta o traz; a 4ª não duplica; equipamento que já tem alerta aberto não ganha outro; resolvido o alerta, uma nova sequência abre outro |
-| `ApiTests.cs` | 5 | a API por HTTP (TestServer): `POST /api/leituras` sem token 401; a sequência do caso 5 não abre alerta; a 3ª leitura de 7,8 °C abre `TEMP_ALTA`/`CRITICA` e a 4ª não duplica; `/instituicoes/{id}/equipamentos` da própria instituição 200 e de outra 403; `DELETE` desativa (`ativo: false`) preservando a leitura e repete em 409 |
+| `ApiTests.cs` | 8 | a API por HTTP (TestServer): `POST /api/leituras` sem token 401; a sequência do caso 5 não abre alerta; a 3ª leitura de 7,8 °C abre `TEMP_ALTA`/`CRITICA` e a 4ª não duplica; `/instituicoes/{id}/equipamentos` da própria instituição 200 e de outra 403; `DELETE` desativa (`ativo: false`) preservando a leitura e repete em 409 |
 
-**Resultado:** 34 testes, 0 falhas (a contagem inclui as variações dos testes parametrizados). Rodam em
+**Resultado:** 37 testes, 0 falhas (a contagem inclui as variações dos testes parametrizados). Rodam em
 `dotnet test FrioSolidario.slnx`, ou por caso: `--filter Caso=5` e `--filter Caso=6`.
 
 **Os testes pegam defeitos?** Para saber se eles protegem a regra, e não só passam, introduzi 10 defeitos

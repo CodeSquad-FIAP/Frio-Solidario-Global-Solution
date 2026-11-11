@@ -7,6 +7,7 @@ public interface IEquipamentoRepository
 {
     Task<IReadOnlyList<(Equipamento Equipamento, string Instituicao)>> ListarAsync(
         long? instituicaoId = null,
+        bool? ativo = null,
         CancellationToken cancellationToken = default);
 
     Task<(Equipamento Equipamento, string Instituicao)?> ObterAsync(

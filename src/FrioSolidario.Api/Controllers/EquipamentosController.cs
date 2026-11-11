@@ -25,8 +25,9 @@ public sealed class EquipamentosController(IEquipamentoService servico) : Contro
     [ProducesResponseType(typeof(IReadOnlyList<EquipamentoResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<EquipamentoResponse>>> Listar(
         [FromQuery] long? instituicaoId,
+        [FromQuery] bool? ativo,
         CancellationToken cancellationToken)
-        => Ok(await servico.ListarAsync(instituicaoId, User.InstituicaoObrigatoria(), cancellationToken));
+        => Ok(await servico.ListarAsync(instituicaoId, User.InstituicaoObrigatoria(), ativo, cancellationToken));
 
     /// <summary>Busca um equipamento pelo id.</summary>
     /// <response code="403">Equipamento de outra instituicao.</response>

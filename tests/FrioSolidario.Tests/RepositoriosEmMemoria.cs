@@ -80,9 +80,10 @@ internal sealed class EquipamentosEmMemoria(params Equipamento[] equipamentos) :
     private readonly List<Equipamento> _itens = [.. equipamentos];
 
     public Task<IReadOnlyList<(Equipamento Equipamento, string Instituicao)>> ListarAsync(
-        long? instituicaoId = null, CancellationToken cancellationToken = default)
+        long? instituicaoId = null, bool? ativo = null, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<(Equipamento, string)>>(_itens
             .Where(e => instituicaoId is null || e.InstituicaoId == instituicaoId)
+            .Where(e => ativo is null || e.Ativo == ativo)
             .Select(e => (e, "instituicao"))
             .ToList());
 
@@ -99,4 +100,29 @@ internal sealed class EquipamentosEmMemoria(params Equipamento[] equipamentos) :
     }
 
     public Task AtualizarAsync(Equipamento equipamento, CancellationToken cancellationToken = default) => Task.CompletedTask;
+}
+
+internal sealed class LotesEmMemoria(params Lote[] lotes) : ILoteRepository
+{
+    private readonly List<Lote> _itens = [.. lotes];
+    private long _proximoId = 100;
+
+    public Task<IReadOnlyList<Lote>> ListarAsync(
+        long? instituicaoId = null, StatusLote? status = null, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<Lote>>(_itens
+            .Where(l => instituicaoId is null || l.InstituicaoId == instituicaoId)
+            .Where(l => status is null || l.Status == status)
+            .ToList());
+
+    public Task<Lote?> ObterAsync(long id, CancellationToken cancellationToken = default)
+        => Task.FromResult(_itens.FirstOrDefault(l => l.Id == id));
+
+    public Task<Lote> AdicionarAsync(Lote lote, CancellationToken cancellationToken = default)
+    {
+        lote.Id = _proximoId++;
+        _itens.Add(lote);
+        return Task.FromResult(lote);
+    }
+
+    public Task AtualizarAsync(Lote lote, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

@@ -54,6 +54,18 @@ internal sealed class ApiDeTeste : WebApplicationFactory<global::Program>
 
     public EquipamentosEmMemoria Equipamentos { get; } = new(CamaraDoSeed(), Sequencias.FreezerDoSeed());
 
+    /// <summary>Um lote da instituicao 2, para provar o isolamento entre instituicoes.</summary>
+    public LotesEmMemoria Lotes { get; } = new(new Lote
+    {
+        Id = 1,
+        InstituicaoId = 2,
+        Descricao = "Lote da outra instituição",
+        Categoria = "FRUTAS",
+        Kg = 10m,
+        Validade = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(10)),
+        Status = StatusLote.DISPONIVEL
+    });
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Só os repositórios são trocados. A configuração vem do appsettings.json da própria API:
@@ -64,10 +76,12 @@ internal sealed class ApiDeTeste : WebApplicationFactory<global::Program>
             servicos.RemoveAll<ILeituraRepository>();
             servicos.RemoveAll<IAlertaRepository>();
             servicos.RemoveAll<IEquipamentoRepository>();
+            servicos.RemoveAll<ILoteRepository>();
 
             servicos.AddSingleton<ILeituraRepository>(Leituras);
             servicos.AddSingleton<IAlertaRepository>(Alertas);
             servicos.AddSingleton<IEquipamentoRepository>(Equipamentos);
+            servicos.AddSingleton<ILoteRepository>(Lotes);
         });
     }
 
@@ -223,5 +237,82 @@ public class ApiTests
 
         var deNovo = await cliente.DeleteAsync("/api/equipamentos/4");
         Assert.Equal(HttpStatusCode.Conflict, deNovo.StatusCode);
+    }
+
+
+    /// <summary>Lote nasce DISPONIVEL na instituicao do token; a retirada o tira do estoque uma vez so.</summary>
+    [Fact]
+    public async Task Lotes_CadastraDisponivel_RegistraRetiradaENaoRepete()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente(instituicaoId: 1);
+
+        var novo = new LoteRequest(
+            "Caixas de tomate italiano", "HORTIFRUTI", 120.5m, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(5)));
+
+        var resposta = await cliente.PostAsJsonAsync("/api/lotes", novo, JsonDaApi.Opcoes);
+        Assert.Equal(HttpStatusCode.Created, resposta.StatusCode);
+
+        var lote = await resposta.Content.ReadFromJsonAsync<LoteResponse>(JsonDaApi.Opcoes);
+        Assert.NotNull(lote);
+        Assert.Equal(StatusLote.DISPONIVEL, lote!.Status);
+        Assert.Equal(1, lote.InstituicaoId);
+        Assert.Null(lote.RetiradoEm);
+
+        var retirada = await cliente.PatchAsJsonAsync(
+            $"/api/lotes/{lote.Id}/retirada", new RetiradaDeLoteRequest(StatusLote.DISTRIBUIDO), JsonDaApi.Opcoes);
+        Assert.Equal(HttpStatusCode.OK, retirada.StatusCode);
+
+        var saiu = await retirada.Content.ReadFromJsonAsync<LoteResponse>(JsonDaApi.Opcoes);
+        Assert.Equal(StatusLote.DISTRIBUIDO, saiu!.Status);
+        Assert.NotNull(saiu!.RetiradoEm);
+
+        var deNovo = await cliente.PatchAsJsonAsync(
+            $"/api/lotes/{lote.Id}/retirada", new RetiradaDeLoteRequest(StatusLote.PERDIDO), JsonDaApi.Opcoes);
+        Assert.Equal(HttpStatusCode.Conflict, deNovo.StatusCode);
+    }
+
+    /// <summary>VOLUNTARIO não cadastra lote (mesma regra de escrita do CRUD) e lote alheio é 403.</summary>
+    [Fact]
+    public async Task Lotes_VoluntarioNaoCadastraELoteDeOutraInstituicao_403()
+    {
+        using var app = new ApiDeTeste();
+
+        var voluntario = app.Cliente(PapelUsuario.VOLUNTARIO, instituicaoId: 1);
+        var tentativa = await voluntario.PostAsJsonAsync(
+            "/api/lotes",
+            new LoteRequest("Doação do voluntário", "FRUTAS", 5m, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3))),
+            JsonDaApi.Opcoes);
+        Assert.Equal(HttpStatusCode.Forbidden, tentativa.StatusCode);
+
+        var cliente = app.Cliente(instituicaoId: 1);
+        var alheio = await cliente.GetAsync("/api/lotes/1");
+        Assert.Equal(HttpStatusCode.Forbidden, alheio.StatusCode);
+
+        var dono = app.Cliente(instituicaoId: 2);
+        var proprio = await dono.GetAsync("/api/lotes/1");
+        Assert.Equal(HttpStatusCode.OK, proprio.StatusCode);
+    }
+
+    /// <summary>O filtro `?ativo=` esconde o equipamento desativado, que é o que o painel do app precisa.</summary>
+    [Fact]
+    public async Task Equipamentos_FiltroAtivo_EscondeDesativado()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente(instituicaoId: 2);
+
+        var desativar = await cliente.DeleteAsync("/api/equipamentos/4");
+        Assert.Equal(HttpStatusCode.NoContent, desativar.StatusCode);
+
+        var todos = await cliente.GetFromJsonAsync<List<EquipamentoResponse>>("/api/equipamentos", JsonDaApi.Opcoes);
+        Assert.Single(todos!);
+
+        var ativos = await cliente.GetFromJsonAsync<List<EquipamentoResponse>>(
+            "/api/equipamentos?ativo=true", JsonDaApi.Opcoes);
+        Assert.Empty(ativos!);
+
+        var inativos = await cliente.GetFromJsonAsync<List<EquipamentoResponse>>(
+            "/api/equipamentos?ativo=false", JsonDaApi.Opcoes);
+        Assert.Single(inativos!);
     }
 }
