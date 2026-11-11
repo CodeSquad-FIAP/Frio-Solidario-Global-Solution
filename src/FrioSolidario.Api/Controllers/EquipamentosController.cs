@@ -1,5 +1,7 @@
 using FrioSolidario.Application.DTOs;
 using FrioSolidario.Application.Services;
+using FrioSolidario.Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FrioSolidario.Api.Controllers;
@@ -30,6 +32,9 @@ public sealed class EquipamentosController(IEquipamentoService servico) : Contro
 
     /// <summary>Cadastra um equipamento. temp_min precisa ser menor que temp_max.</summary>
     [HttpPost]
+    [Authorize(Roles = nameof(PapelUsuario.ADMIN))]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(EquipamentoResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<EquipamentoResponse>> Criar(
@@ -42,6 +47,9 @@ public sealed class EquipamentosController(IEquipamentoService servico) : Contro
 
     /// <summary>Atualiza um equipamento existente.</summary>
     [HttpPut("{id:long}")]
+    [Authorize(Roles = nameof(PapelUsuario.ADMIN))]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(EquipamentoResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -54,6 +62,9 @@ public sealed class EquipamentosController(IEquipamentoService servico) : Contro
     /// <summary>Remove um equipamento sem leituras nem alertas vinculados.</summary>
     /// <response code="409">Equipamento possui leituras ou alertas (FK ON DELETE RESTRICT).</response>
     [HttpDelete("{id:long}")]
+    [Authorize(Roles = nameof(PapelUsuario.ADMIN))]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]

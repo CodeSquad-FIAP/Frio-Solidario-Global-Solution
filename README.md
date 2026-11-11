@@ -63,8 +63,8 @@ curl -s -X POST http://localhost:5199/api/auth/login \
   -d '{"email":"mariana.costa@caminhosdobem.example","senha":"Frio@2026"}'
 ```
 
-A senha nunca é gravada em texto puro: o `senha_hash` do seed é BCrypt (work factor 10) e o login
-confere a senha contra ele. E-mail inexistente e senha errada devolvem o mesmo 401 com a mesma
+A senha nunca é gravada em texto puro: o `senha_hash` do seed é BCrypt (work factor 10), o login
+confere a senha contra ele e `IPasswordHasher.Gerar` produz hashes novos com o mesmo custo. E-mail inexistente e senha errada devolvem o mesmo 401 com a mesma
 mensagem, para não revelar quais e-mails existem. No Swagger, use **Authorize** e cole apenas o
 token. O token vale 8 horas e carrega papel (`ADMIN`/`VOLUNTARIO`) e instituição; a API usa a
 instituição do token para recusar (403) leitura, alerta ou relatório de equipamento de outra
@@ -119,9 +119,10 @@ equipamento no cadastro muda o comportamento sem tocar em código.
 | GET | `/api/equipamentos/{id}/relatorio?de=&ate=` | log térmico em PDF (7 dias por padrão) |
 
 As rotas de `/api/auth/login`, `/api/health` e o Swagger são públicas; **leituras, alertas e
-relatório exigem `Authorization: Bearer <token>`**. Os endpoints de CRUD de instituições e
-equipamentos continuam abertos por enquanto — aplicá-los a autenticação é o card de segurança do
-Arthur (10→14/11).
+relatório exigem `Authorization: Bearer <token>`**. No CRUD de instituições e equipamentos, as
+**escritas (POST, PUT, DELETE) exigem o papel `ADMIN`**: sem token vem 401 e com token de
+`VOLUNTARIO` vem 403. As leituras (GET) do CRUD continuam abertas por enquanto — exigir token nelas
+é o card de segurança do Arthur (10→14/11).
 
 Os enums trafegam como texto (`CAMARA`, `MERCADO`, `ABERTO`), nunca como número. Erros voltam em
 `ProblemDetails`: 400 regra de negócio/validação, 401 credenciais ou token inválido, 403 equipamento
@@ -227,7 +228,8 @@ Com `localhost:5199` a API só responde na própria máquina — é a causa nº 
 | Banco de dados | pronto — ER, `schema.sql` com constraints, carga, verificação e 5 consultas (André), testado em PostgreSQL 17.11 |
 | Entidades + acesso a dados (EF Core/Npgsql) | pronto — 6 entidades em `Domain/Entities`, `FrioSolidarioDbContext` e repositórios na Infrastructure |
 | CRUD de instituições e equipamentos | pronto — `/api/instituicoes` e `/api/equipamentos`, com validação e 400/404/409 |
-| Login com JWT | pronto — `POST /api/auth/login`, BCrypt + token com papel e instituição |
+| Login com JWT | pronto — `POST /api/auth/login`, BCrypt (gerar e conferir) + token com papel e instituição |
+| Perfis ADMIN e VOLUNTARIO | pronto — escritas do CRUD de instituições e equipamentos exigem `ADMIN` (401 sem token, 403 para `VOLUNTARIO`) |
 | Leituras (ingestão + série) | pronto — `POST /api/leituras` (201) e `GET /api/equipamentos/{id}/leituras?periodo=24h\|7d` |
 | Regra de faixa → alerta | pronto — 3 leituras seguidas fora da faixa, porta aberta por tempo, severidade por desvio; `GET /api/alertas` e `PATCH /api/alertas/{id}/resolver` |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
@@ -258,7 +260,7 @@ instituição real foi usada; os dados do projeto são fictícios.
 | App mobile | não iniciado no repositório da API | Kevin |
 | Sensor MQTT publicando ao vivo | script de simulação previsto para 10/11; a API já aceita `POST /api/leituras` | Roger |
 | Testes automatizados (xUnit) | não existem ainda; a verificação de hoje é por chamada real documentada acima | Arthur |
-| Autenticação nos CRUD de instituições/equipamentos | rotas ainda abertas | Arthur (10→14/11) |
+| Token nas leituras (GET) do CRUD de instituições/equipamentos | rotas ainda abertas (as escritas já exigem `ADMIN`) | Arthur (10→14/11) |
 
 Melhor a banca ler isso aqui do que descobrir na apresentação — o edital desconta o que não roda.
 

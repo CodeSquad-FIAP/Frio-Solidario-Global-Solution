@@ -1,5 +1,7 @@
 using FrioSolidario.Application.DTOs;
 using FrioSolidario.Application.Services;
+using FrioSolidario.Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FrioSolidario.Api.Controllers;
@@ -30,6 +32,9 @@ public sealed class InstituicoesController(IInstituicaoService servico) : Contro
     /// <summary>Cadastra uma instituicao. CNPJ vai sem pontuacao e nao pode repetir.</summary>
     /// <response code="409">CNPJ ja cadastrado.</response>
     [HttpPost]
+    [Authorize(Roles = nameof(PapelUsuario.ADMIN))]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(InstituicaoResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
@@ -43,6 +48,9 @@ public sealed class InstituicoesController(IInstituicaoService servico) : Contro
 
     /// <summary>Atualiza os dados de uma instituicao existente.</summary>
     [HttpPut("{id:long}")]
+    [Authorize(Roles = nameof(PapelUsuario.ADMIN))]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(InstituicaoResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -56,6 +64,9 @@ public sealed class InstituicoesController(IInstituicaoService servico) : Contro
     /// <summary>Remove uma instituicao sem equipamentos, usuarios ou lotes vinculados.</summary>
     /// <response code="409">Instituicao possui vinculos (FK ON DELETE RESTRICT).</response>
     [HttpDelete("{id:long}")]
+    [Authorize(Roles = nameof(PapelUsuario.ADMIN))]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
