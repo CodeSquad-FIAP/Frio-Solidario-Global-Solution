@@ -134,7 +134,7 @@ mostrando que o equipamento está intacto.
 | # | Passo | Resultado esperado |
 |---|---|---|
 | 1 | `POST /api/equipamentos` com `{"instituicaoId":1,"nome":"Freezer de teste","tipo":"FREEZER","tempMin":-22,"tempMax":-15,"umidMax":80}` | **201**, corpo com `id` novo (7), `instituicao` "Banco de Alimentos Caminhos do Bem", `ativo` true. Guarde o `id` |
-| 2 | `GET /api/equipamentos?instituicaoId=1` | **200**, a lista traz o equipamento novo junto com os equipamentos 1 e 2. Quem filtra é a instituição **do token**; o `instituicaoId` na query é ignorado hoje (não serve para ver a instituição de outro usuário) |
+| 2 | `GET /api/equipamentos?instituicaoId=1` | **200**, a lista traz o equipamento novo junto com os equipamentos 1 e 2. Sem `instituicaoId`, a lista já vem só com a instituição **do token**; com o `instituicaoId` de **outra** instituição a API responde **403** (`detail` "Instituicao 2 nao e a instituicao do usuario.") |
 | 3 | `POST` com `tempMin` 8 e `tempMax` 2 | **400** (`detail` "Temperatura minima (8) deve ser menor que a maxima (2).") |
 | 4 | `POST` com `umidMax` 101 | **400** de validação ("Umidade maxima deve ficar entre 0,01 e 100.") |
 | 5 | `POST` com `"tipo":"AQUARIO"` | **400** (tipo fora de `CAMARA`, `GELADEIRA`, `FREEZER`) |
@@ -174,7 +174,7 @@ disponível.
 |---|---|
 | **Verifica** | README, "Regra de alerta": o alerta exige 3 leituras seguidas fora da faixa (evita alarme falso); `RegraDeAlerta.cs` compara com `temp_max` de forma estrita |
 | **Pré-condição** | Equipamento 4 (faixa -25 a -18 °C, umidade máx. 85 %, instituição 2) sem alerta aberto; `{{token-bruna}}` (qualquer perfil da instituição 2 pode gravar leitura) |
-| **Automação** | **xUnit** (regra pura em `RegraDeAlerta.Avaliar`) |
+| **Automação** | **xUnit**: `RegraDeAlertaTests` (regra pura, `RegraDeAlerta.Avaliar`) e `LeituraServiceTests` (fluxo do serviço, repositórios em memória). `dotnet test --filter Caso=5` |
 
 Envie as leituras abaixo, nesta ordem, com `POST /api/leituras`
 (`{"equipamentoId":4,"temperatura":T,"umidade":75.0,"portaAberta":false,"origem":"SIMULADO"}`):
@@ -200,7 +200,7 @@ No banco: `SELECT count(*) FROM alerta WHERE equipamento_id = 4;` deve dar **0**
 |---|---|
 | **Verifica** | README, "Regra de alerta": `TEMP_ALTA` com 3 leituras acima de `temp_max`; severidade por desvio (≥ 1,5 °C = `ALTA`, ≥ 3 °C = `CRITICA`); um alerta aberto por tipo e equipamento |
 | **Pré-condição** | Caso 5 executado (a última leitura do equipamento 4 foi -18.0, dentro da faixa) |
-| **Automação** | **xUnit** (regra de severidade e de não duplicação) |
+| **Automação** | **xUnit**: `RegraDeAlertaTests` (severidade por desvio, faixa do equipamento) e `LeituraServiceTests` (um alerta aberto por tipo, sem duplicar). `dotnet test --filter Caso=6` |
 
 | # | Passo | Resultado esperado |
 |---|---|---|

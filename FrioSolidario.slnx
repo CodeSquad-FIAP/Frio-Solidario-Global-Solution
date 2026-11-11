@@ -5,4 +5,7 @@
     <Project Path="src/FrioSolidario.Domain/FrioSolidario.Domain.csproj" />
     <Project Path="src/FrioSolidario.Infrastructure/FrioSolidario.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FrioSolidario.Tests/FrioSolidario.Tests.csproj" />
+  </Folder>
 </Solution>

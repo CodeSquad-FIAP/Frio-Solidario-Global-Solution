@@ -14,6 +14,8 @@ src/
 ├── FrioSolidario.Application/     # serviços e regras de negócio + interfaces dos repositórios
 ├── FrioSolidario.Infrastructure/  # implementação dos repositórios (banco, MQTT)
 └── FrioSolidario.Api/             # controllers, Swagger, injeção de dependência
+tests/
+└── FrioSolidario.Tests/           # testes xUnit da regra de alerta (sem banco e sem HTTP)
 ```
 
 O fluxo é sempre **Controller → Service → Repository**: o controller não conhece banco, o serviço não
@@ -42,6 +44,21 @@ dotnet run --project src/FrioSolidario.Api
 O campo `origemDosDados` é lido do banco de verdade (`SELECT COUNT(*)` em `equipamento`): quando o
 Postgres está fora do ar ou o schema não foi carregado, a API não quebra — responde
 `"banco indisponivel (schema nao carregado ou Postgres fora do ar)"` com HTTP 200.
+
+## Testes automatizados
+
+Os casos 5 e 6 do plano de testes (`docs/plano-de-testes.md`) rodam em xUnit, sem banco e sem HTTP:
+
+```bash
+dotnet test
+dotnet test --filter Caso=5   # menos de 3 leituras fora da faixa não abrem alerta
+dotnet test --filter Caso=6   # 3 leituras seguidas abrem 1 alerta, sem duplicar
+```
+
+São 29 testes em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
+severidade por desvio) e o fluxo do `POST /api/leituras` com repositórios em memória
+(`LeituraServiceTests`: um alerta aberto por tipo, sem duplicar). Os demais casos do plano (login,
+perfis, CRUD, segurança, relatório) são verificados por chamada real, com evidência em `docs/`.
 
 ## Login (demo)
 
@@ -258,6 +275,7 @@ Com `localhost:5199` a API só responde na própria máquina — é a causa nº 
 | Segurança (JWT, validação, anti-SQLi, anti-XSS) | pronto — todas as rotas com token, isolamento por instituição, limite no login, cabeçalhos de segurança; ver seção "Segurança" |
 | Leituras (ingestão + série) | pronto — `POST /api/leituras` (201) e `GET /api/equipamentos/{id}/leituras?periodo=24h\|7d` |
 | Regra de faixa → alerta | pronto — 3 leituras seguidas fora da faixa, porta aberta por tempo, severidade por desvio; `GET /api/alertas` e `PATCH /api/alertas/{id}/resolver` |
+| Testes automatizados (xUnit) | pronto — casos 5 e 6 do plano (regra de alerta): 29 testes em `tests/FrioSolidario.Tests`, `dotnet test` |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
 | App mobile | Kevin |
 | IoT (MQTT) | Roger — o comando do Mosquitto e o script do sensor entram no README quando ele fechar (16/11) |
@@ -285,7 +303,7 @@ instituição real foi usada; os dados do projeto são fictícios.
 |---|---|---|
 | App mobile | não iniciado no repositório da API | Kevin |
 | Sensor MQTT publicando ao vivo | script de simulação previsto para 10/11; a API já aceita `POST /api/leituras` | Roger |
-| Testes automatizados (xUnit) | não existem ainda; a verificação de hoje é por chamada real documentada acima | Arthur |
+| Testes automatizados (xUnit) abrangentes | só a regra de alerta (casos 5 e 6) tem testes; login, perfis, CRUD, segurança e relatório são verificados por chamada real, com evidência em `docs/` | Arthur |
 | HTTPS | a demo roda em HTTP na rede local (`:5199`); em produção a API ficaria atrás de TLS | grupo |
 | Chave do JWT | o `appsettings.json` traz uma chave de desenvolvimento; fora da demo, defina `Jwt__Key` | grupo |
 | Administrador do sistema | não há papel acima de `ADMIN`: qualquer `ADMIN` pode cadastrar instituição nova (alterar e remover, só a própria) | grupo |

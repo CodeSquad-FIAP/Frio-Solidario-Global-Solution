@@ -108,7 +108,7 @@ instituição, validade).
 | Telas do app nos casos 3 (cadastro) e 8 (lista de alertas) | O app do Kevin não está neste repositório nem no ambiente de teste. Os dois casos foram executados pela API; as capturas de tela do app precisam ser tiradas por quem roda o app |
 | Prints do app | Há prints do Swagger UI e do terminal, mas não das telas do app (Kevin) |
 | Sensor MQTT ao vivo | Os casos 5 e 6 enviam as leituras pelo mesmo `POST /api/leituras` que o sensor usa; a publicação MQTT é do Roger |
-| Alertas de umidade e de porta aberta | Fora dos 8 casos do plano; ficam para o teste automatizado |
+| Alertas de umidade e de porta aberta | Fora dos 9 casos do plano; ficam para o teste automatizado |
 
 ## Observações
 
@@ -126,7 +126,9 @@ O caso 9 entrou no plano porque os 8 casos não tocavam no relatório do períod
 que corrigiu o fuso do PDF), **pela API em HTTP direto** — sem Swagger UI, então este caso não tem print;
 a evidência é o status, os cabeçalhos e o texto do PDF extraído, transcritos abaixo.
 
-**9 de 9 passos.**
+**9 de 9 passos.** Os resultados foram reproduzidos e confirmados por Arthur em 11/11/2026, na auditoria da versão atualizada
+do repositório (mesmas respostas; o PDF do passo 1 saiu com 2 bytes de diferença, 43.248, e o horário do passo 4 acompanha o
+seed recarregado naquela hora).
 
 | # | Passo | Medido |
 |---|---|---|
@@ -142,3 +144,38 @@ a evidência é o status, os cabeçalhos e o texto do PDF extraído, transcritos
 
 Com o caso 9, o plano fecha **9 de 9 casos e 67 de 67 passos**; os 8 primeiros seguem com as evidências
 e os prints desta rodada.
+
+## Testes automatizados (xUnit)
+
+Os casos 5 e 6 do plano também rodam como testes automatizados, sem banco e sem HTTP, em
+`tests/FrioSolidario.Tests` (`dotnet test`). O que o plano executa a mão pela API roda em
+milissegundos a cada build.
+
+| Arquivo | Testes | O que cobre |
+|---|---|---|
+| `RegraDeAlertaTests.cs` | 25 (13 métodos, 5 parametrizados) | a regra pura: 1 ou 2 leituras fora da faixa não abrem alerta; a sequência do plano; os limites exatos (-18 e -25) que não contam; 3 leituras abrem `TEMP_ALTA`/`TEMP_BAIXA`; severidade por desvio com os limites 1,5 e 3,0; a faixa vem do equipamento; a ordem de entrada não importa |
+| `LeituraServiceTests.cs` | 4 | o fluxo do `POST /api/leituras` com repositórios em memória: a 3ª leitura abre 1 alerta e a resposta o traz; a 4ª não duplica; equipamento que já tem alerta aberto não ganha outro; resolvido o alerta, uma nova sequência abre outro |
+
+**Resultado:** 29 testes, 0 falhas (a contagem inclui as variações dos testes parametrizados). Rodam em
+`dotnet test FrioSolidario.slnx`, ou por caso: `--filter Caso=5` e `--filter Caso=6`.
+
+**Os testes pegam defeitos?** Para saber se eles protegem a regra, e não só passam, introduzi 10 defeitos
+de propósito numa cópia (nunca no repositório) e rodei os testes em cada um. **Os 10 foram pegos**, e com o
+código original restaurado os 29 voltaram a passar:
+
+| Defeito introduzido | Testes que falharam |
+|---|---|
+| exige 2 leituras em vez de 3 | 8 |
+| o limite superior (-18) passa a contar como fora da faixa (`>` vira `>=`) | 4 |
+| o limite inferior (-25) passa a contar como fora (`<` vira `<=`) | 1 |
+| CRÍTICA só acima de 3 °C (`>=` vira `>`) | 2 |
+| ALTA só acima de 1,5 °C (`>=` vira `>`) | 1 |
+| faixa fixa no código (-18) no lugar da faixa do equipamento | 1 |
+| severidade pelo desvio da 1ª leitura, não da última | 1 |
+| deixa de ignorar leitura posterior à nova | 1 |
+| deixa de bloquear alerta duplicado | 2 |
+| `TEMP_BAIXA` sempre `MEDIA` | 2 |
+
+**O que os testes não cobrem:** os alertas de umidade e de porta aberta (a regra existe, mas não está nos
+casos 5 e 6), o banco e o HTTP. Login, perfis, CRUD, segurança e relatório continuam verificados pelos casos
+manuais e pelos prints acima.
