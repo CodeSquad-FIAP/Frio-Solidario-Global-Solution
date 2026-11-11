@@ -5,30 +5,51 @@ using FrioSolidario.Domain.Entities;
 
 namespace FrioSolidario.Application.Services;
 
+/// <summary>
+/// CRUD dos equipamentos com isolamento por instituicao: sem filtro a lista ja vem so com os da
+/// instituicao do token, e consultar, cadastrar, alterar ou remover equipamento de outra
+/// instituicao e 403 -- o mesmo criterio das leituras e do relatorio.
+/// </summary>
 public sealed class EquipamentoService(
     IEquipamentoRepository equipamentos,
     IInstituicaoRepository instituicoes) : IEquipamentoService
 {
     public async Task<IReadOnlyList<EquipamentoResponse>> ListarAsync(
         long? instituicaoId = null,
+        long? instituicaoDoToken = null,
         CancellationToken cancellationToken = default)
     {
-        var lista = await equipamentos.ListarAsync(instituicaoId, cancellationToken);
+        if (instituicaoId is not null)
+        {
+            EscopoDaInstituicao.Garantir(
+                instituicaoId.Value,
+                instituicaoDoToken,
+                $"Instituicao {instituicaoId} nao e a instituicao do usuario.");
+        }
+
+        var lista = await equipamentos.ListarAsync(instituicaoId ?? instituicaoDoToken, cancellationToken);
         return lista.Select(item => EquipamentoResponse.De(item.Equipamento, item.Instituicao)).ToList();
     }
 
-    public async Task<EquipamentoResponse> ObterAsync(long id, CancellationToken cancellationToken = default)
+    public async Task<EquipamentoResponse> ObterAsync(
+        long id,
+        long? instituicaoDoToken = null,
+        CancellationToken cancellationToken = default)
     {
         var encontrado = await equipamentos.ObterAsync(id, cancellationToken)
             ?? throw new KeyNotFoundException($"Equipamento {id} nao encontrado.");
+
+        GarantirDoUsuario(encontrado.Equipamento.InstituicaoId, id, instituicaoDoToken);
 
         return EquipamentoResponse.De(encontrado.Equipamento, encontrado.Instituicao);
     }
 
     public async Task<EquipamentoResponse> CriarAsync(
         EquipamentoRequest request,
+        long? instituicaoDoToken = null,
         CancellationToken cancellationToken = default)
     {
+        GarantirInstituicaoDoCadastro(request, instituicaoDoToken);
         ValidarFaixa(request);
         await GarantirInstituicaoAsync(request.InstituicaoId, cancellationToken);
 
@@ -51,11 +72,15 @@ public sealed class EquipamentoService(
     public async Task<EquipamentoResponse> AtualizarAsync(
         long id,
         EquipamentoRequest request,
+        long? instituicaoDoToken = null,
         CancellationToken cancellationToken = default)
     {
         var encontrado = await equipamentos.ObterAsync(id, cancellationToken)
             ?? throw new KeyNotFoundException($"Equipamento {id} nao encontrado.");
 
+        // Os dois lados: o equipamento precisa ser do usuario e nao pode ser transferido para outra instituicao.
+        GarantirDoUsuario(encontrado.Equipamento.InstituicaoId, id, instituicaoDoToken);
+        GarantirInstituicaoDoCadastro(request, instituicaoDoToken);
         ValidarFaixa(request);
         await GarantirInstituicaoAsync(request.InstituicaoId, cancellationToken);
 
@@ -73,13 +98,31 @@ public sealed class EquipamentoService(
         return EquipamentoResponse.De(equipamento, instituicao?.Nome ?? string.Empty);
     }
 
-    public async Task RemoverAsync(long id, CancellationToken cancellationToken = default)
+    public async Task RemoverAsync(
+        long id,
+        long? instituicaoDoToken = null,
+        CancellationToken cancellationToken = default)
     {
         var encontrado = await equipamentos.ObterAsync(id, cancellationToken)
             ?? throw new KeyNotFoundException($"Equipamento {id} nao encontrado.");
 
+        GarantirDoUsuario(encontrado.Equipamento.InstituicaoId, id, instituicaoDoToken);
+
         await equipamentos.RemoverAsync(encontrado.Equipamento, cancellationToken);
     }
+
+    private static void GarantirDoUsuario(long instituicaoDoEquipamento, long id, long? instituicaoDoToken)
+        => EscopoDaInstituicao.Garantir(
+            instituicaoDoEquipamento,
+            instituicaoDoToken,
+            $"Equipamento {id} pertence a outra instituicao.");
+
+    /// <summary>Cadastrar ou mover equipamento para outra instituicao seria escrever nos dados dela.</summary>
+    private static void GarantirInstituicaoDoCadastro(EquipamentoRequest request, long? instituicaoDoToken)
+        => EscopoDaInstituicao.Garantir(
+            request.InstituicaoId,
+            instituicaoDoToken,
+            $"Instituicao {request.InstituicaoId} nao e a instituicao do usuario.");
 
     /// <summary>Mesma regra do CHECK ck_equipamento_faixa: minimo estritamente menor que o maximo.</summary>
     private static void ValidarFaixa(EquipamentoRequest request)

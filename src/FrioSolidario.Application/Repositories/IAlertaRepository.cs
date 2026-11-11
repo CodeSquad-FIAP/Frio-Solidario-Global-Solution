@@ -21,9 +21,11 @@ public interface IAlertaRepository
         TipoAlerta tipo,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Fila de alertas; <paramref name="instituicaoId"/> restringe aos equipamentos dessa instituicao.</summary>
     Task<IReadOnlyList<(Alerta Alerta, string Equipamento)>> ListarAsync(
         StatusAlerta? status = null,
         long? equipamentoId = null,
+        long? instituicaoId = null,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Alerta>> ListarPorPeriodoAsync(

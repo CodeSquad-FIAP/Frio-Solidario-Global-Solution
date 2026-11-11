@@ -1,12 +1,16 @@
 using System.ComponentModel.DataAnnotations;
+using FrioSolidario.Application.Validation;
 using FrioSolidario.Domain;
 using FrioSolidario.Domain.Entities;
 
 namespace FrioSolidario.Application.DTOs;
 
-/// <summary>Dados que o app envia para cadastrar ou editar uma instituicao.</summary>
+/// <summary>
+/// Dados que o app envia para cadastrar ou editar uma instituicao. Os campos de texto recusam
+/// marcacao (<see cref="SemMarcacaoHtmlAttribute"/>): sao exibidos no app e no relatorio.
+/// </summary>
 public sealed record InstituicaoRequest(
-    [Required, StringLength(150, MinimumLength = 3)]
+    [Required, StringLength(150, MinimumLength = 3), SemMarcacaoHtml]
     string Nome,
 
     [Required(ErrorMessage = "CNPJ e obrigatorio.")]
@@ -16,10 +20,10 @@ public sealed record InstituicaoRequest(
     [Required]
     TipoInstituicao Tipo,
 
-    [Required, StringLength(120, MinimumLength = 2)]
+    [Required, StringLength(120, MinimumLength = 2), SemMarcacaoHtml]
     string Cidade,
 
-    [Required, StringLength(255, MinimumLength = 3)]
+    [Required, StringLength(255, MinimumLength = 3), SemMarcacaoHtml]
     string Endereco);
 
 /// <summary>Instituicao como o app recebe (sem objeto de banco).</summary>

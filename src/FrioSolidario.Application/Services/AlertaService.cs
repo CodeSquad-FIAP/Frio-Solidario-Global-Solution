@@ -17,9 +17,20 @@ public sealed class AlertaService(
     public async Task<IReadOnlyList<AlertaResponse>> ListarAsync(
         StatusAlerta? status = null,
         long? equipamentoId = null,
+        long? instituicaoDoToken = null,
         CancellationToken cancellationToken = default)
     {
-        var lista = await alertas.ListarAsync(status, equipamentoId, cancellationToken);
+        // Filtrar por equipamento de outra instituicao e 403, como nas leituras; sem filtro, a
+        // consulta ja sai restrita a instituicao do token.
+        if (equipamentoId is not null && await equipamentos.ObterAsync(equipamentoId.Value, cancellationToken) is { } filtrado)
+        {
+            EscopoDaInstituicao.Garantir(
+                filtrado.Equipamento.InstituicaoId,
+                instituicaoDoToken,
+                $"Equipamento {equipamentoId} pertence a outra instituicao.");
+        }
+
+        var lista = await alertas.ListarAsync(status, equipamentoId, instituicaoDoToken, cancellationToken);
 
         return lista
             .OrderByDescending(item => Peso(item.Alerta.Severidade))
@@ -31,10 +42,20 @@ public sealed class AlertaService(
     public async Task<AlertaResponse> ResolverAsync(
         long id,
         long resolvidoPorId,
+        long? instituicaoDoToken = null,
         CancellationToken cancellationToken = default)
     {
         var alerta = await alertas.ObterAsync(id, cancellationToken)
             ?? throw new KeyNotFoundException($"Alerta {id} nao encontrado.");
+
+        var equipamento = await equipamentos.ObterAsync(alerta.EquipamentoId, cancellationToken);
+        if (equipamento is not null)
+        {
+            EscopoDaInstituicao.Garantir(
+                equipamento.Value.Equipamento.InstituicaoId,
+                instituicaoDoToken,
+                $"Alerta {id} e de equipamento de outra instituicao.");
+        }
 
         if (alerta.Status == StatusAlerta.RESOLVIDO)
         {
@@ -50,7 +71,6 @@ public sealed class AlertaService(
 
         await alertas.AtualizarAsync(alerta, cancellationToken);
 
-        var equipamento = await equipamentos.ObterAsync(alerta.EquipamentoId, cancellationToken);
         return AlertaResponse.De(alerta, equipamento?.Equipamento.Nome ?? string.Empty);
     }
 

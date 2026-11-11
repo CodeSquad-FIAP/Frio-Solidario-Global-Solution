@@ -18,6 +18,12 @@ public sealed class RelatorioService(
 {
     private const int DiasPadrao = 7;
 
+    /// <summary>
+    /// Teto do periodo. Sem ele, de=0001-01-01 faria a API carregar e desenhar a historia inteira do
+    /// equipamento num PDF so: um request barato de mandar e caro de atender. 92 dias cobrem um trimestre.
+    /// </summary>
+    private const int DiasMaximo = 92;
+
     public async Task<RelatorioGerado> GerarAsync(
         long equipamentoId,
         DateOnly? de = null,
@@ -41,6 +47,11 @@ public sealed class RelatorioService(
         if (inicio > fim)
         {
             throw new RegraDeNegocioException($"Periodo invalido: de ({inicio}) e posterior a ate ({fim}).");
+        }
+
+        if (fim.DayNumber - inicio.DayNumber + 1 > DiasMaximo)
+        {
+            throw new RegraDeNegocioException($"Periodo maximo do relatorio e de {DiasMaximo} dias.");
         }
 
         // O fim e inclusivo no dia inteiro: quem pede ate=10/11 quer o dia 10 dentro.

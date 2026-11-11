@@ -64,11 +64,12 @@ curl -s -X POST http://localhost:5199/api/auth/login \
 ```
 
 A senha nunca é gravada em texto puro: o `senha_hash` do seed é BCrypt (work factor 10), o login
-confere a senha contra ele e `IPasswordHasher.Gerar` produz hashes novos com o mesmo custo. E-mail inexistente e senha errada devolvem o mesmo 401 com a mesma
-mensagem, para não revelar quais e-mails existem. No Swagger, use **Authorize** e cole apenas o
-token. O token vale 8 horas e carrega papel (`ADMIN`/`VOLUNTARIO`) e instituição; a API usa a
-instituição do token para recusar (403) leitura, alerta ou relatório de equipamento de outra
-instituição.
+confere a senha contra ele e `IPasswordHasher.Gerar` produz hashes novos com o mesmo custo.
+E-mail inexistente e senha errada devolvem o mesmo 401 com a mesma mensagem, para não revelar
+quais e-mails existem, e o login aceita **10 tentativas por minuto por IP** (a 11ª volta 429). No
+Swagger, use **Authorize** e cole apenas o token. O token vale 8 horas e carrega papel
+(`ADMIN`/`VOLUNTARIO`) e instituição; a API usa a instituição do token para recusar (403)
+equipamento, leitura, alerta ou relatório de outra instituição.
 
 A chave do token fica em `Jwt:Key` no `appsettings.json` (valor de desenvolvimento) e pode ser
 trocada sem editar arquivo:
@@ -100,33 +101,53 @@ equipamento no cadastro muda o comportamento sem tocar em código.
 
 | Método | Rota | O que faz |
 |---|---|---|
-| GET | `/api/health` | status da API + quantos equipamentos existem no banco |
-| GET | `/api/instituicoes` | lista instituições em ordem alfabética |
+| GET | `/api/health` | status da API + quantos equipamentos existem no banco (pública) |
+| GET | `/api/instituicoes` | lista todas as instituições em ordem alfabética |
 | GET | `/api/instituicoes/{id}` | busca uma instituição (404 se não existe) |
-| POST | `/api/instituicoes` | cadastra (CNPJ com 14 dígitos, sem pontuação; 409 se repetido) |
-| PUT | `/api/instituicoes/{id}` | atualiza |
-| DELETE | `/api/instituicoes/{id}` | remove (409 se tiver equipamentos/usuários/lotes) |
-| GET | `/api/equipamentos?instituicaoId=` | lista equipamentos, filtrando por instituição |
-| GET | `/api/equipamentos/{id}` | busca um equipamento |
-| POST | `/api/equipamentos` | cadastra (temp_min < temp_max, umidade até 100) |
-| PUT | `/api/equipamentos/{id}` | atualiza |
-| DELETE | `/api/equipamentos/{id}` | remove (409 se tiver leituras/alertas) |
-| POST | `/api/auth/login` | autentica e devolve o token (única rota pública) |
+| POST | `/api/instituicoes` | cadastra — `ADMIN` (CNPJ com 14 dígitos, sem pontuação; 409 se repetido) |
+| PUT | `/api/instituicoes/{id}` | atualiza — `ADMIN`, só a própria instituição |
+| DELETE | `/api/instituicoes/{id}` | remove — `ADMIN`, só a própria (409 se tiver equipamentos/usuários/lotes) |
+| GET | `/api/equipamentos?instituicaoId=` | lista os equipamentos da instituição do token (`instituicaoId` opcional; de outra = 403) |
+| GET | `/api/equipamentos/{id}` | busca um equipamento da instituição do token |
+| POST | `/api/equipamentos` | cadastra — `ADMIN`, na própria instituição (temp_min < temp_max, umidade até 100) |
+| PUT | `/api/equipamentos/{id}` | atualiza — `ADMIN`, sem trocar de instituição |
+| DELETE | `/api/equipamentos/{id}` | remove — `ADMIN` (409 se tiver leituras/alertas) |
+| POST | `/api/auth/login` | autentica e devolve o token (pública; 10 tentativas/min por IP) |
 | POST | `/api/leituras` | registra leitura do sensor e devolve os alertas que ela abriu |
 | GET | `/api/equipamentos/{id}/leituras?periodo=24h\|7d` | série do gráfico (24h por padrão) |
-| GET | `/api/alertas?status=ABERTO&equipamentoId=` | fila de alertas, mais grave primeiro |
-| PATCH | `/api/alertas/{id}/resolver` | resolve o alerta com o usuário do token |
-| GET | `/api/equipamentos/{id}/relatorio?de=&ate=` | log térmico em PDF (7 dias por padrão) |
+| GET | `/api/alertas?status=ABERTO&equipamentoId=` | fila de alertas da instituição do token, mais grave primeiro |
+| PATCH | `/api/alertas/{id}/resolver` | resolve o alerta com o usuário do token (só da própria instituição) |
+| GET | `/api/equipamentos/{id}/relatorio?de=&ate=` | log térmico em PDF (7 dias por padrão, até 92 dias) |
 
-As rotas de `/api/auth/login`, `/api/health` e o Swagger são públicas; **leituras, alertas e
-relatório exigem `Authorization: Bearer <token>`**. No CRUD de instituições e equipamentos, as
-**escritas (POST, PUT, DELETE) exigem o papel `ADMIN`**: sem token vem 401 e com token de
-`VOLUNTARIO` vem 403. As leituras (GET) do CRUD continuam abertas por enquanto — exigir token nelas
-é o card de segurança do Arthur (10→14/11).
+Só `/api/auth/login`, `/api/health` e o Swagger são públicos; **todas as outras rotas exigem
+`Authorization: Bearer <token>`** (a API é fechada por padrão: rota nova nasce protegida). No CRUD
+de instituições e equipamentos, as **escritas (POST, PUT, DELETE) exigem o papel `ADMIN`**: sem
+token vem 401 e com token de `VOLUNTARIO` vem 403.
 
-Os enums trafegam como texto (`CAMARA`, `MERCADO`, `ABERTO`), nunca como número. Erros voltam em
-`ProblemDetails`: 400 regra de negócio/validação, 401 credenciais ou token inválido, 403 equipamento
-de outra instituição, 404 não encontrado, 409 conflito com o estado do banco.
+Os enums trafegam como texto (`CAMARA`, `MERCADO`, `ABERTO`), nunca como número — número no lugar
+do texto volta 400. Erros voltam em `ProblemDetails`: 400 regra de negócio/validação, 401
+credenciais ou token ausente/inválido/expirado, 403 perfil sem permissão ou recurso de outra
+instituição, 404 não encontrado, 409 conflito com o estado do banco, 429 tentativas de login demais.
+
+## Segurança
+
+Resumo do card JWT + validação + anti-SQLi + anti-XSS (Arthur), para a seção de segurança do PDF.
+Cada linha foi conferida rodando a API contra o banco do seed (PostgreSQL 17.11).
+
+| Ameaça | Defesa na API | Como conferir |
+|---|---|---|
+| Acesso sem login | Política de fallback exige token em toda rota não marcada como pública | `GET /api/equipamentos` sem token → 401 |
+| Token forjado ou adulterado | Assinatura HMAC-SHA256 obrigatória, algoritmo fixo (`HS256`; `alg: none` recusado), emissor, público e validade conferidos, folga de 30 s | token com outra chave ou `alg: none` → 401 |
+| Token vencido | Validade de 8 h; 401 com a mensagem "Token expirado" para o app voltar ao login | token vencido → 401 |
+| Voluntário fazendo tarefa de administrador | Papel do token (`ADMIN`/`VOLUNTARIO`) exigido nas escritas do CRUD | `VOLUNTARIO` em `POST /api/equipamentos` → 403 |
+| Usuário mexendo em dados de outra instituição (IDOR) | Instituição do token conferida em equipamentos, alertas, resolução, leituras, relatório e na alteração de instituição; token sem instituição é recusado | ADMIN da instituição 1 em `GET /api/equipamentos/3` → 403 |
+| Adivinhar senha | BCrypt (lento de propósito) + 10 tentativas de login por minuto por IP; mesma resposta para e-mail inexistente e senha errada | 11ª tentativa em 1 min → 429 |
+| SQL Injection | Todo acesso ao banco é EF Core com LINQ (consultas parametrizadas); nenhum SQL montado por concatenação no código. Parâmetros têm tipo (`long`, enum, data), então texto no lugar de número nem chega ao serviço | `?instituicaoId=1 OR 1=1` → 400; senha `' OR '1'='1` → 401 |
+| XSS armazenado | Nome, cidade e endereço recusam `<`, `>` e caracteres de controle; o JSON sai escapado (`<` vira `\u003C`) e o PDF desenha texto, não HTML | nome `<script>alert(1)</script>` → 400 |
+| Resposta interpretada como página | `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'` (fora do Swagger), `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cache-Control: no-store` em `/api`; sem cabeçalho `Server` | cabeçalhos de qualquer resposta de `/api` |
+| Dado fora do vocabulário | Enum só por nome (`"FREEZER"`), validação dos DTOs (tamanho, faixa, CNPJ) antes do serviço | `"tipo": 2` → 400 |
+| Requisição cara de atender | Relatório limitado a 92 dias por pedido | `de=2026-01-01&ate=2026-11-10` → 400 |
+| Senha truncada em silêncio | `IPasswordHasher.Gerar` recusa senha acima de 72 bytes (limite do BCrypt) | — (sem cadastro de usuário na API ainda) |
 
 ## Contrato para o app (Kevin)
 
@@ -161,7 +182,10 @@ Ordem que o app segue, com o corpo real de cada resposta (medido rodando a API):
 
 Detalhes que evitam retrabalho no app: enums trafegam em texto (`CAMARA`, `TEMP_ALTA`, `ABERTO`); datas
 vêm em ISO 8601 **UTC** (`+00:00`) e precisam ser convertidas para o fuso do aparelho na exibição; 401
-significa token vencido (8 h) — volte para o login; 403 significa equipamento de outra instituição.
+significa token ausente ou vencido (8 h) — volte para o login; 403 significa perfil sem permissão
+(`VOLUNTARIO` tentando cadastrar) ou recurso de outra instituição; 429 no login significa tentativas
+demais — espere um minuto. Toda resposta de erro, inclusive 401 e 403, vem em `ProblemDetails`
+(`title`, `status`, `detail`).
 
 ## Contrato para o sensor (Roger)
 
@@ -230,6 +254,7 @@ Com `localhost:5199` a API só responde na própria máquina — é a causa nº 
 | CRUD de instituições e equipamentos | pronto — `/api/instituicoes` e `/api/equipamentos`, com validação e 400/404/409 |
 | Login com JWT | pronto — `POST /api/auth/login`, BCrypt (gerar e conferir) + token com papel e instituição |
 | Perfis ADMIN e VOLUNTARIO | pronto — escritas do CRUD de instituições e equipamentos exigem `ADMIN` (401 sem token, 403 para `VOLUNTARIO`) |
+| Segurança (JWT, validação, anti-SQLi, anti-XSS) | pronto — todas as rotas com token, isolamento por instituição, limite no login, cabeçalhos de segurança; ver seção "Segurança" |
 | Leituras (ingestão + série) | pronto — `POST /api/leituras` (201) e `GET /api/equipamentos/{id}/leituras?periodo=24h\|7d` |
 | Regra de faixa → alerta | pronto — 3 leituras seguidas fora da faixa, porta aberta por tempo, severidade por desvio; `GET /api/alertas` e `PATCH /api/alertas/{id}/resolver` |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
@@ -260,7 +285,9 @@ instituição real foi usada; os dados do projeto são fictícios.
 | App mobile | não iniciado no repositório da API | Kevin |
 | Sensor MQTT publicando ao vivo | script de simulação previsto para 10/11; a API já aceita `POST /api/leituras` | Roger |
 | Testes automatizados (xUnit) | não existem ainda; a verificação de hoje é por chamada real documentada acima | Arthur |
-| Token nas leituras (GET) do CRUD de instituições/equipamentos | rotas ainda abertas (as escritas já exigem `ADMIN`) | Arthur (10→14/11) |
+| HTTPS | a demo roda em HTTP na rede local (`:5199`); em produção a API ficaria atrás de TLS | grupo |
+| Chave do JWT | o `appsettings.json` traz uma chave de desenvolvimento; fora da demo, defina `Jwt__Key` | grupo |
+| Administrador do sistema | não há papel acima de `ADMIN`: qualquer `ADMIN` pode cadastrar instituição nova (alterar e remover, só a própria) | grupo |
 
 Melhor a banca ler isso aqui do que descobrir na apresentação — o edital desconta o que não roda.
 

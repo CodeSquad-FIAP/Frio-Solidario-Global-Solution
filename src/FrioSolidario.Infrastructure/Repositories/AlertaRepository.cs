@@ -40,6 +40,7 @@ public sealed class AlertaRepository(FrioSolidarioDbContext contexto) : Applicat
     public async Task<IReadOnlyList<(Alerta Alerta, string Equipamento)>> ListarAsync(
         StatusAlerta? status = null,
         long? equipamentoId = null,
+        long? instituicaoId = null,
         CancellationToken cancellationToken = default)
     {
         var consulta =
@@ -48,6 +49,7 @@ public sealed class AlertaRepository(FrioSolidarioDbContext contexto) : Applicat
                 on alerta.EquipamentoId equals equipamento.Id
             where (status == null || alerta.Status == status)
                 && (equipamentoId == null || alerta.EquipamentoId == equipamentoId)
+                && (instituicaoId == null || equipamento.InstituicaoId == instituicaoId)
             select new { Alerta = alerta, Equipamento = equipamento.Nome };
 
         var linhas = await consulta.ToListAsync(cancellationToken);

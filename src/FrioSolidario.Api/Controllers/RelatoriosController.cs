@@ -13,7 +13,8 @@ namespace FrioSolidario.Api.Controllers;
 public sealed class RelatoriosController(IRelatorioService relatorios) : ControllerBase
 {
     /// <summary>Baixa o PDF do log termico do equipamento no periodo.</summary>
-    /// <response code="400">Periodo invalido (de posterior a ate).</response>
+    /// <response code="400">Periodo invalido (de posterior a ate, ou mais de 92 dias).</response>
+    /// <response code="403">Equipamento de outra instituicao.</response>
     /// <response code="404">Equipamento nao encontrado.</response>
     [HttpGet("api/equipamentos/{equipamentoId:long}/relatorio")]
     [Produces("application/pdf")]
@@ -26,7 +27,7 @@ public sealed class RelatoriosController(IRelatorioService relatorios) : Control
         [FromQuery] DateOnly? ate,
         CancellationToken cancellationToken)
     {
-        var relatorio = await relatorios.GerarAsync(equipamentoId, de, ate, User.Instituicao(), cancellationToken);
+        var relatorio = await relatorios.GerarAsync(equipamentoId, de, ate, User.InstituicaoObrigatoria(), cancellationToken);
         return File(relatorio.Conteudo, "application/pdf", relatorio.NomeArquivo);
     }
 }

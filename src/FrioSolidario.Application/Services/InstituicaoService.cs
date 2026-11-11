@@ -5,6 +5,10 @@ using FrioSolidario.Domain.Entities;
 
 namespace FrioSolidario.Application.Services;
 
+/// <summary>
+/// Cadastro de instituicoes. Listar e consultar sao abertos a qualquer usuario logado (nome, CNPJ e
+/// endereco sao dados publicos do parceiro); alterar e remover so a propria instituicao do token.
+/// </summary>
 public sealed class InstituicaoService(IInstituicaoRepository repositorio) : IInstituicaoService
 {
     public async Task<IReadOnlyList<InstituicaoResponse>> ListarAsync(CancellationToken cancellationToken = default)
@@ -43,11 +47,13 @@ public sealed class InstituicaoService(IInstituicaoRepository repositorio) : IIn
     public async Task<InstituicaoResponse> AtualizarAsync(
         long id,
         InstituicaoRequest request,
+        long? instituicaoDoToken = null,
         CancellationToken cancellationToken = default)
     {
         var instituicao = await repositorio.ObterAsync(id, cancellationToken)
             ?? throw new KeyNotFoundException($"Instituicao {id} nao encontrada.");
 
+        EscopoDaInstituicao.Garantir(id, instituicaoDoToken, $"Instituicao {id} nao e a instituicao do usuario.");
         await GarantirCnpjLivreAsync(request.Cnpj, ignorarId: id, cancellationToken);
 
         instituicao.Nome = request.Nome.Trim();
@@ -60,10 +66,15 @@ public sealed class InstituicaoService(IInstituicaoRepository repositorio) : IIn
         return InstituicaoResponse.De(instituicao);
     }
 
-    public async Task RemoverAsync(long id, CancellationToken cancellationToken = default)
+    public async Task RemoverAsync(
+        long id,
+        long? instituicaoDoToken = null,
+        CancellationToken cancellationToken = default)
     {
         var instituicao = await repositorio.ObterAsync(id, cancellationToken)
             ?? throw new KeyNotFoundException($"Instituicao {id} nao encontrada.");
+
+        EscopoDaInstituicao.Garantir(id, instituicaoDoToken, $"Instituicao {id} nao e a instituicao do usuario.");
 
         await repositorio.RemoverAsync(instituicao, cancellationToken);
     }

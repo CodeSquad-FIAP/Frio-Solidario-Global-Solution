@@ -9,14 +9,17 @@ namespace FrioSolidario.Api.Controllers;
 /// <summary>
 /// CRUD de instituicoes. A controller so traduz HTTP: validacao de forma fica nas
 /// DataAnnotations do DTO, regra de negocio no InstituicaoService e banco no repositorio.
+/// Exige token em todas as rotas; escrever exige ADMIN, e alterar/remover so a propria instituicao.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/instituicoes")]
 [Produces("application/json")]
 public sealed class InstituicoesController(IInstituicaoService servico) : ControllerBase
 {
     /// <summary>Lista todas as instituicoes em ordem alfabetica.</summary>
     [HttpGet]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(IReadOnlyList<InstituicaoResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<InstituicaoResponse>>> Listar(CancellationToken cancellationToken)
         => Ok(await servico.ListarAsync(cancellationToken));
@@ -24,6 +27,7 @@ public sealed class InstituicoesController(IInstituicaoService servico) : Contro
     /// <summary>Busca uma instituicao pelo id.</summary>
     /// <response code="404">Instituicao nao encontrada.</response>
     [HttpGet("{id:long}")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(InstituicaoResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<InstituicaoResponse>> Obter(long id, CancellationToken cancellationToken)
@@ -47,6 +51,7 @@ public sealed class InstituicoesController(IInstituicaoService servico) : Contro
     }
 
     /// <summary>Atualiza os dados de uma instituicao existente.</summary>
+    /// <response code="403">Usuario nao e ADMIN ou a instituicao nao e a dele.</response>
     [HttpPut("{id:long}")]
     [Authorize(Roles = nameof(PapelUsuario.ADMIN))]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
@@ -59,9 +64,10 @@ public sealed class InstituicoesController(IInstituicaoService servico) : Contro
         long id,
         InstituicaoRequest request,
         CancellationToken cancellationToken)
-        => Ok(await servico.AtualizarAsync(id, request, cancellationToken));
+        => Ok(await servico.AtualizarAsync(id, request, User.InstituicaoObrigatoria(), cancellationToken));
 
     /// <summary>Remove uma instituicao sem equipamentos, usuarios ou lotes vinculados.</summary>
+    /// <response code="403">Usuario nao e ADMIN ou a instituicao nao e a dele.</response>
     /// <response code="409">Instituicao possui vinculos (FK ON DELETE RESTRICT).</response>
     [HttpDelete("{id:long}")]
     [Authorize(Roles = nameof(PapelUsuario.ADMIN))]
@@ -72,7 +78,7 @@ public sealed class InstituicoesController(IInstituicaoService servico) : Contro
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Remover(long id, CancellationToken cancellationToken)
     {
-        await servico.RemoverAsync(id, cancellationToken);
+        await servico.RemoverAsync(id, User.InstituicaoObrigatoria(), cancellationToken);
         return NoContent();
     }
 }

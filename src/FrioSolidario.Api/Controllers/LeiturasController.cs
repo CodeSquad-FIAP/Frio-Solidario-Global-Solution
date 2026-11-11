@@ -28,7 +28,7 @@ public sealed class LeiturasController(ILeituraService leituras) : ControllerBas
         LeituraRequest request,
         CancellationToken cancellationToken)
     {
-        var registrada = await leituras.RegistrarAsync(request, User.Instituicao(), cancellationToken);
+        var registrada = await leituras.RegistrarAsync(request, User.InstituicaoObrigatoria(), cancellationToken);
         return Created($"/api/leituras/{registrada.Leitura.Id}", registrada);
     }
 
@@ -42,5 +42,5 @@ public sealed class LeiturasController(ILeituraService leituras) : ControllerBas
         long equipamentoId,
         [FromQuery] string? periodo,
         CancellationToken cancellationToken)
-        => Ok(await leituras.ListarAsync(equipamentoId, periodo, User.Instituicao(), cancellationToken));
+        => Ok(await leituras.ListarAsync(equipamentoId, periodo, User.InstituicaoObrigatoria(), cancellationToken));
 }

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using FrioSolidario.Application.Validation;
 using FrioSolidario.Domain;
 using FrioSolidario.Domain.Entities;
 
@@ -6,13 +7,14 @@ namespace FrioSolidario.Application.DTOs;
 
 /// <summary>
 /// Dados de um equipamento monitorado. A faixa (<see cref="TempMin"/>..<see cref="TempMax"/>) e a
-/// umidade maxima precisam ser plausiveis -- as mesmas regras do CHECK do schema.
+/// umidade maxima precisam ser plausiveis -- as mesmas regras do CHECK do schema. O nome recusa
+/// marcacao (<see cref="SemMarcacaoHtmlAttribute"/>) porque aparece no app e no relatorio.
 /// </summary>
 public sealed record EquipamentoRequest(
     [Range(1, long.MaxValue, ErrorMessage = "Instituicao obrigatoria.")]
     long InstituicaoId,
 
-    [Required, StringLength(150, MinimumLength = 3)]
+    [Required, StringLength(150, MinimumLength = 3), SemMarcacaoHtml]
     string Nome,
 
     [Required]

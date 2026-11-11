@@ -1,14 +1,16 @@
 using FrioSolidario.Application.DTOs;
 using FrioSolidario.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FrioSolidario.Api.Controllers;
 
 /// <summary>
 /// Camada de controller: so recebe a requisicao, chama o servico e devolve o status HTTP.
-/// Nenhuma regra de negocio mora aqui.
+/// Nenhuma regra de negocio mora aqui. Publico de proposito: e o que se testa antes de ter token.
 /// </summary>
 [ApiController]
+[AllowAnonymous]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public sealed class HealthController : ControllerBase

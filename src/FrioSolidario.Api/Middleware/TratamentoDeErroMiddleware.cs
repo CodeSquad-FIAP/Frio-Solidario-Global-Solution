@@ -48,7 +48,16 @@ public sealed class TratamentoDeErroMiddleware(RequestDelegate next, ILogger<Tra
         }
     }
 
-    private static Task EscreverAsync(HttpContext context, int status, string titulo, string detalhe)
+    /// <summary>
+    /// Tambem usado pelos eventos do JWT (401/403) e pelo limitador do login (429): toda resposta de
+    /// erro da API sai no mesmo formato, venha de excecao, de token recusado ou de excesso de tentativas.
+    /// </summary>
+    internal static Task EscreverAsync(
+        HttpContext context,
+        int status,
+        string titulo,
+        string detalhe,
+        Action<HttpResponse>? cabecalhos = null)
     {
         if (context.Response.HasStarted)
         {
@@ -57,6 +66,9 @@ public sealed class TratamentoDeErroMiddleware(RequestDelegate next, ILogger<Tra
 
         context.Response.Clear();
         context.Response.StatusCode = status;
+
+        // Depois do Clear, que apagaria cabecalhos como WWW-Authenticate (401) e Retry-After (429).
+        cabecalhos?.Invoke(context.Response);
 
         return context.Response.WriteAsJsonAsync(new ProblemDetails
         {
