@@ -1,6 +1,7 @@
 using FrioSolidario.Application.Repositories;
 using FrioSolidario.Application.Relatorios;
 using FrioSolidario.Application.Security;
+using FrioSolidario.Infrastructure.Mqtt;
 using FrioSolidario.Infrastructure.Persistence;
 using FrioSolidario.Infrastructure.Relatorios;
 using FrioSolidario.Infrastructure.Repositories;
@@ -37,6 +38,15 @@ public static class DependencyInjection
 
         // Relatorio em PDF (QuestPDF). Sem estado, por isso singleton.
         services.AddSingleton<IRelatorioPdf, QuestPdfRelatorioPdf>();
+
+        // Ponte MQTT -> API (sensor do Roger). So e registrada com Mqtt:Habilitado=true; desligada,
+        // nenhum socket abriu e dotnet run/testes continuam funcionando sem broker nenhum.
+        services.Configure<OpcoesMqtt>(configuration.GetSection(OpcoesMqtt.Secao));
+        if (configuration.GetValue<bool>($"{OpcoesMqtt.Secao}:Habilitado"))
+        {
+            services.AddHostedService<PonteMqttDeLeituras>();
+        }
+
         return services;
     }
 }

@@ -56,7 +56,7 @@ dotnet test --filter Caso=5   # menos de 3 leituras fora da faixa não abrem ale
 dotnet test --filter Caso=6   # 3 leituras seguidas abrem 1 alerta, sem duplicar
 ```
 
-São **37 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
+São **57 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
 severidade por desvio), o fluxo do `POST /api/leituras` com repositórios em memória
 (`LeituraServiceTests`: um alerta aberto por tipo, sem duplicar) e a API por HTTP (`ApiTests`: 401 sem
 token, casos 5 e 6, a rota `/instituicoes/{id}/equipamentos` e o DELETE lógico do equipamento). Os
@@ -262,6 +262,45 @@ Intervalo sugerido de publicação: **2 minutos** — é o intervalo da carga in
 seguidas fora da faixa, então em 2 min o alarme aparece no app em ~6 min (dentro da meta de 15 min do
 pitch). Publicar mais rápido que isso também funciona: a fila não duplica alerta aberto.
 
+## Ponte MQTT (sensor → API)
+
+Além do `POST /api/leituras`, a API sabe ouvir o broker. A ponte é um `BackgroundService`
+(`Infrastructure/Mqtt/PonteMqttDeLeituras.cs`) que assina o tópico, converte a mensagem em
+`LeituraRequest` e chama o **mesmo** `LeituraService` do endpoint — a leitura do sensor passa pela
+regra de faixa e abre alerta igual a uma leitura vinda do app.
+
+```bash
+# 1. broker (Docker) — sem config externa, só para a demo
+docker run -d --name frio-mqtt -p 1883:1883 eclipse-mosquitto:2 \
+  sh -c "printf 'listener 1883\nallow_anonymous true\n' > /mosquitto/config/mosquitto.conf && mosquitto -c /mosquitto/config/mosquitto.conf"
+
+# 2. API com a ponte ligada (desligada por padrão, no appsettings Mqtt:Habilitado=false)
+cd src/FrioSolidario.Api
+Mqtt__Habilitado=true dotnet run
+
+# 3. publicar como o sensor
+mosquitto_pub -h localhost -t "frio/equipamentos/4/leitura" \
+  -m '{"temperatura": -10.2, "umidade": 60, "portaAberta": false}'
+```
+
+| Item | Valor |
+|---|---|
+| Tópico | `frio/equipamentos/{idEquipamento}/leitura` (a ponte assina `frio/equipamentos/+/leitura`) |
+| Payload | `{"temperatura": 7.8, "umidade": 55, "portaAberta": false, "registradaEm": "2026-11-12T00:10:00-03:00"}` |
+| Obrigatórios | `temperatura` e `umidade` (número ou texto; aceita `-18,5`) |
+| Opcionais | `portaAberta` (padrão `false`) e `registradaEm` (sem ela, o servidor usa o recebimento) |
+| Aceita também | `snake_case` (`porta_aberta`, `registrada_em`) — script em Python costuma sair assim |
+| QoS da assinatura | 1 — o broker reentrega se a API cair no meio |
+
+Configuração (`appsettings.json`, seção `Mqtt`): `Habilitado`, `Host`, `Porta`, `PrefixoTopico`,
+`ClienteId`, `Usuario`, `Senha`. Tudo trocável por ambiente (`Mqtt__Host=...`). Com
+`Habilitado=false` nenhum socket é aberto — `dotnet run` e `dotnet test` continuam sem broker.
+
+**O que a ponte faz com mensagem ruim:** só registra no log e mantém a assinatura. Temperatura fora de
+-40..80, JSON inválido, tópico fora do padrão e equipamento inexistente **não** viram leitura, e o
+sensor não tem canal para receber erro — o log é a evidência. Medido em
+`docs/evidencias/mqtt-ponte-ponta-a-ponta.md`.
+
 ## Como apontar o app para a API
 
 `localhost` no celular é o celular. Três caminhos, do mais simples ao mais realista na apresentação:
@@ -294,11 +333,11 @@ Com `localhost:5199` a API só responde na própria máquina — é a causa nº 
 | Segurança (JWT, validação, anti-SQLi, anti-XSS) | pronto — todas as rotas com token, isolamento por instituição, limite no login, cabeçalhos de segurança; ver seção "Segurança" |
 | Leituras (ingestão + série) | pronto — `POST /api/leituras` (201) e `GET /api/equipamentos/{id}/leituras?periodo=24h\|7d` |
 | Regra de faixa → alerta | pronto — 3 leituras seguidas fora da faixa, porta aberta por tempo, severidade por desvio; `GET /api/alertas` e `PATCH /api/alertas/{id}/resolver` |
-| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **37 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
+| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **57 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
 | Lotes doados | pronto — `/api/lotes` (lista, busca, cadastro e retirada), sempre na instituição do token; alimenta os indicadores de kg doados e perda |
 | App mobile | Kevin |
-| IoT (MQTT) | Roger — o comando do Mosquitto e o script do sensor entram no README quando ele fechar (16/11) |
+| IoT (MQTT) | ponte pronta na API (tópico `frio/equipamentos/{id}/leitura`, ver "Ponte MQTT"); falta só o script do sensor publicando, do Roger |
 
 ## Uso de IA
 
@@ -322,7 +361,7 @@ instituição real foi usada; os dados do projeto são fictícios.
 | Item | Situação | Dono |
 |---|---|---|
 | App mobile | não iniciado no repositório da API | Kevin |
-| Sensor MQTT publicando ao vivo | script de simulação previsto para 10/11; a API já aceita `POST /api/leituras` | Roger |
+| Sensor MQTT publicando ao vivo | a ponte da API está pronta e medida (mensagem do broker vira leitura e alerta em ~1 s); o script do sensor publicando é que ainda não existe no repositório | Roger |
 | Testes automatizados (xUnit) abrangentes | os casos 5, 6 e o 401 do caso 7 rodam sem banco (regra, serviço e API via TestServer); login com BCrypt, perfis, CRUD restante e relatório seguem verificados por chamada real, com evidência em `docs/` | Arthur |
 | HTTPS | a demo roda em HTTP na rede local (`:5199`); em produção a API ficaria atrás de TLS | grupo |
 | Chave do JWT | o `appsettings.json` traz uma chave de desenvolvimento; fora da demo, defina `Jwt__Key` | grupo |
