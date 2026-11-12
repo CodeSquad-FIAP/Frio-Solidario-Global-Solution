@@ -25,5 +25,5 @@ Aprovado!  – Com falha:     0, Aprovado:    57, Ignorado:     0, Total:    57,
 
 **Resultado:** 57 aprovados, 0 falhas, 0 ignorados → **PASSOU**
 
-> Como o card pede print: a captura de tela desta execução (`dotnet test` verde) ainda não está em
-> `prints/`; o comando acima é a saída real desta rodada, colada integralmente.
+> Print desta execução: `prints/xunit-dotnet-test-verde-57.png` (captura do terminal com as 3 linhas
+> anteriores). O comando acima continua sendo a saída real da rodada de 12/11.

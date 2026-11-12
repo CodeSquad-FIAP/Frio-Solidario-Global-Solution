@@ -417,6 +417,12 @@ reassinado com a chave de desenvolvimento e `exp` 3 h no passado (20:58:59Z, com
 Controle na mesma rodada: o token do login, intacto, devolveu `200` com os 2 alertas abertos da
 instituição 1.
 
+**Print:** `prints/caso-07-g-token-expirado-401.png` — refeito em 12/11/2026, 00:24, com a API na
+porta 5312 e o banco recarregado do `seed.sql`. Token assinado com a chave de desenvolvimento e `exp`
+5 min no passado → `401` e `detail: "Token expirado. Faca login novamente."`; na mesma captura, o
+token do login real → `200` com 2 alertas. Também conferido: token com a assinatura correta mas **sem
+`exp`** → `401` (`RequireExpirationTime = true` em `TokenValidationParameters`).
+
 
 ## Passo 13 — Token com alg none
 

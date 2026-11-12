@@ -4,8 +4,9 @@ Execução do [plano de testes](plano-de-testes.md) (8 casos na rodada; o caso 9
 está no fim deste documento) em **11/11/2026**, por Arthur (frente
 Segurança + Testes). Cada caso tem um arquivo de evidência em `docs/evidencias/` com a
 requisição enviada, a resposta recebida (status, cabeçalhos de segurança e corpo) e a consulta ao
-banco que confirma o efeito, e há **27 prints** em `docs/evidencias/prints/`: 21 do Swagger UI e 6 do terminal com as
-consultas ao banco (seções "Prints do Swagger" e "Prints do terminal").
+banco que confirma o efeito, e há **29 prints** em `docs/evidencias/prints/`: 21 do Swagger UI e 8 do terminal — consultas ao
+banco, o token expirado (`caso-07-g-token-expirado-401.png`, 12/11) e o `dotnet test` verde
+(`xunit-dotnet-test-verde-57.png`).
 
 ## Resultado
 
