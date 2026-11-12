@@ -2,9 +2,9 @@
 
 Execução do [plano de testes](plano-de-testes.md) (8 casos na rodada; o caso 9 foi acrescentado depois e
 está no fim deste documento) em **11/11/2026**, por Arthur (frente
-Segurança + Testes). Cada caso tem um arquivo de evidência em `docs/evidencias-testes/` com a
+Segurança + Testes). Cada caso tem um arquivo de evidência em `docs/evidencias/` com a
 requisição enviada, a resposta recebida (status, cabeçalhos de segurança e corpo) e a consulta ao
-banco que confirma o efeito, e há **27 prints** em `docs/evidencias-testes/prints/`: 21 do Swagger UI e 6 do terminal com as
+banco que confirma o efeito, e há **27 prints** em `docs/evidencias/prints/`: 21 do Swagger UI e 6 do terminal com as
 consultas ao banco (seções "Prints do Swagger" e "Prints do terminal").
 
 ## Resultado
@@ -14,14 +14,14 @@ inesperado durante a rodada.
 
 | Caso | O que verifica | Passos | Resultado | Cobertura | Evidência |
 |---|---|---|---|---|---|
-| 1 | Login com BCrypt, mesmo 401 para e-mail inexistente e senha errada | 5/5 | Passou | completa | [caso-01](evidencias-testes/caso-01-login-bcrypt.md) |
-| 2 | ADMIN escreve, VOLUNTARIO não (401/403) | 7/7 | Passou | completa | [caso-02](evidencias-testes/caso-02-perfis.md) |
-| 3 | Cadastro de equipamento e faixa inválida | 6/6 | Passou | **só a API** (tela do app não executada) | [caso-03](evidencias-testes/caso-03-cadastro-equipamento.md) |
-| 4 | Editar, desativar (DELETE lógico, histórico preservado) e série de 24 h | 7/7 | Passou | completa | [caso-04](evidencias-testes/caso-04-manutencao-equipamento.md) |
-| 5 | 1 ou 2 leituras fora da faixa não abrem alerta | 7/7 | Passou | completa | [caso-05](evidencias-testes/caso-05-regra-menos-de-3-leituras.md) |
-| 6 | 3 leituras seguidas abrem 1 alerta, sem duplicar | 6/6 | Passou | completa | [caso-06](evidencias-testes/caso-06-regra-3-leituras.md) |
-| 7 | Token, SQL Injection, XSS, isolamento e limite de login | 13/13 | Passou | completa (10 passos do plano + 3 extras) | [caso-07](evidencias-testes/caso-07-seguranca.md) |
-| 8 | Fila de alertas, resolução, 409 e 403 | 7/7 | Passou | **só a API** (lista do app não executada) | [caso-08](evidencias-testes/caso-08-fila-e-resolucao.md) |
+| 1 | Login com BCrypt, mesmo 401 para e-mail inexistente e senha errada | 5/5 | Passou | completa | [caso-01](evidencias/caso-01-login-bcrypt.md) |
+| 2 | ADMIN escreve, VOLUNTARIO não (401/403) | 7/7 | Passou | completa | [caso-02](evidencias/caso-02-perfis.md) |
+| 3 | Cadastro de equipamento e faixa inválida | 6/6 | Passou | **só a API** (tela do app não executada) | [caso-03](evidencias/caso-03-cadastro-equipamento.md) |
+| 4 | Editar, desativar (DELETE lógico, histórico preservado) e série de 24 h | 7/7 | Passou | completa | [caso-04](evidencias/caso-04-manutencao-equipamento.md) |
+| 5 | 1 ou 2 leituras fora da faixa não abrem alerta | 7/7 | Passou | completa | [caso-05](evidencias/caso-05-regra-menos-de-3-leituras.md) |
+| 6 | 3 leituras seguidas abrem 1 alerta, sem duplicar | 6/6 | Passou | completa | [caso-06](evidencias/caso-06-regra-3-leituras.md) |
+| 7 | Token, SQL Injection, XSS, isolamento e limite de login | 13/13 | Passou | completa (10 passos do plano + 3 extras) | [caso-07](evidencias/caso-07-seguranca.md) |
+| 8 | Fila de alertas, resolução, 409 e 403 | 7/7 | Passou | **só a API** (lista do app não executada) | [caso-08](evidencias/caso-08-fila-e-resolucao.md) |
 
 Os casos 1, 2, 4, 5, 6 e 7 foram executados por inteiro. Os casos 3 e 8 foram executados pela API, que é
 o que o app chama; falta neles a captura da tela do app (ver "O que não foi executado").
@@ -35,7 +35,7 @@ token de acesso foi trocado por `<token JWT omitido>` no `curl` e no corpo da re
 imagem não foi alterado. Cada nome de arquivo traz o status HTTP, e a automação conferiu que a
 resposta real era a do nome.
 
-| Caso | Prints (`docs/evidencias-testes/prints/`) |
+| Caso | Prints (`docs/evidencias/prints/`) |
 |---|---|
 | 1 | `caso-01-a-login-200.png`, `caso-01-b-login-senha-errada-401.png` |
 | 2 | `caso-02-a-cadastro-sem-token-401.png`, `caso-02-b-cadastro-voluntario-403.png` |
@@ -58,7 +58,7 @@ ação pela API, mostra o `HTTP` devolvido e roda a consulta `psql` que confirma
 no painel do terminal, e foi conferida uma a uma. O roteiro foi uma rodada separada, com o banco
 recarregado, e termina nos mesmos estados do plano.
 
-| Caso | Print (`docs/evidencias-testes/prints/`) | O que mostra |
+| Caso | Print (`docs/evidencias/prints/`) | O que mostra |
 |---|---|---|
 | 1 | `caso-01-terminal-hashes-bcrypt.png` | os 6 usuários com `senha_hash` `$2a$10$` de 60 caracteres, sem senha em texto |
 | 3 | `caso-03-terminal-equipamento-gravado.png` | o equipamento 7 gravado com a faixa -22 a -15 |
@@ -118,6 +118,9 @@ instituição, validade).
 - **Duração.** A rodada leva cerca de 3 minutos, porque o caso 7 espera 61 segundos para zerar a janela
   do limite de login antes do passo 10 e mais 61 segundos antes dos extras.
 - **Entrada de dados.** Os dados de teste são fictícios; nenhuma credencial real foi usada.
+- **Dois prints pendentes.** O 401 com token expirado (passo 12 do caso 7) e o `dotnet test` verde
+  estão medidos e transcritos nos arquivos de evidência, mas ainda sem captura de tela na pasta
+  `prints/`. São os dois únicos itens de evidência em falta.
 - **DELETE lógico do equipamento (11/11).** `DELETE /api/equipamentos/{id}` passou a **desativar**
   (`ativo: false`, 204) em vez de apagar: leitura e alerta antigos continuam, e desativar de novo devolve
   409. O caso 4 foi reexecutado com esse comportamento — 204, `ativo: false`, as 5 leituras preservadas e
@@ -165,7 +168,8 @@ API roda em milissegundos a cada build.
 | `ApiTests.cs` | 8 | a API por HTTP (TestServer): `POST /api/leituras` sem token 401; a sequência do caso 5 não abre alerta; a 3ª leitura de 7,8 °C abre `TEMP_ALTA`/`CRITICA` e a 4ª não duplica; `/instituicoes/{id}/equipamentos` da própria instituição 200 e de outra 403; `DELETE` desativa (`ativo: false`) preservando a leitura e repete em 409 |
 
 **Resultado:** 37 testes, 0 falhas (a contagem inclui as variações dos testes parametrizados). Rodam em
-`dotnet test FrioSolidario.slnx`, ou por caso: `--filter Caso=5` e `--filter Caso=6`.
+`dotnet test FrioSolidario.slnx`, ou por caso: `--filter Caso=5` e `--filter Caso=6`. A saída real desta
+rodada está em [`evidencias/xunit-dotnet-test.md`](evidencias/xunit-dotnet-test.md).
 
 **Os testes pegam defeitos?** Para saber se eles protegem a regra, e não só passam, introduzi 10 defeitos
 de propósito numa cópia (nunca no repositório) e rodei os testes em cada um. **Os 10 foram pegos**, e com o

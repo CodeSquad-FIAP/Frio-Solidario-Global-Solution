@@ -410,6 +410,13 @@ Cache-Control: no-store
 
 **Resultado do passo 12:** esperado 401 "Token expirado. Faca login novamente."; obtido 401 'Token expirado. Faca login novamente.' → **PASSOU**
 
+**Reexecução em 11/11/2026, 23:58 (API + PostgreSQL 17.11 no ar):** o mesmo token real do login foi
+reassinado com a chave de desenvolvimento e `exp` 3 h no passado (20:58:59Z, com o relógio em
+23:58:59Z). Resposta idêntica: `401`, `WWW-Authenticate: Bearer`,
+`{"title":"Nao autenticado","status":401,"detail":"Token expirado. Faca login novamente.","instance":"/api/alertas"}`.
+Controle na mesma rodada: o token do login, intacto, devolveu `200` com os 2 alertas abertos da
+instituição 1.
+
 
 ## Passo 13 — Token com alg none
 
