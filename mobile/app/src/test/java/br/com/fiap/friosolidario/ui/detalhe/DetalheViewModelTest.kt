@@ -35,6 +35,7 @@ class DetalheViewModelTest {
     @Before
     fun preparar() {
         rotas["/api/equipamentos/1"] = { json(equipamentoJson(1)) }
+        rotas["/api/equipamentos/1/leituras/ultima"] = { json(leituraJson(2, 1, 3.0, "2026-11-15T10:10:00+00:00")) }
         rotas["/api/equipamentos/1/leituras?periodo=24h"] = { json(serie24h) }
         rotas["/api/equipamentos/1/leituras?periodo=7d"] = { json(serie24h) }
         servidor.dispatcher = rotas

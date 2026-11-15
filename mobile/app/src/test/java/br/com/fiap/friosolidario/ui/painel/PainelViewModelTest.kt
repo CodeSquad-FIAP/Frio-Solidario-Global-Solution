@@ -35,8 +35,8 @@ class PainelViewModelTest {
     @Before
     fun preparar() {
         rotas["/api/equipamentos?ativo=true"] = { json("[${equipamentoJson(1)},${equipamentoJson(2)}]") }
-        rotas["/api/equipamentos/1/leituras?periodo=24h"] = { json("[${leituraJson(10, 1, 9.0, "2026-11-15T10:05:00+00:00")}]") }
-        rotas["/api/equipamentos/2/leituras?periodo=24h"] = { json("[${leituraJson(20, 2, 2.0, "2026-11-15T10:05:00+00:00")}]") }
+        rotas["/api/equipamentos/1/leituras/ultima"] = { json(leituraJson(10, 1, 9.0, "2026-11-15T10:05:00+00:00")) }
+        rotas["/api/equipamentos/2/leituras/ultima"] = { json(leituraJson(20, 2, 2.0, "2026-11-15T10:05:00+00:00")) }
         servidor.dispatcher = rotas
         servidor.start()
         val api = servidor.api()
@@ -71,7 +71,7 @@ class PainelViewModelTest {
         carregar()
         assertEquals(Semaforo.VERMELHO, itens().first { it.equipamento.id == 1L }.semaforo)
 
-        rotas["/api/equipamentos/1/leituras?periodo=24h"] = { MockResponse().setResponseCode(500) }
+        rotas["/api/equipamentos/1/leituras/ultima"] = { MockResponse().setResponseCode(500) }
         atualizar()
 
         val freezer = itens().first { it.equipamento.id == 1L }
@@ -82,7 +82,7 @@ class PainelViewModelTest {
 
     @Test
     fun `serie que falha na primeira carga avisa em vez de parecer equipamento sem leitura`() {
-        rotas["/api/equipamentos/1/leituras?periodo=24h"] = { MockResponse().setResponseCode(500) }
+        rotas["/api/equipamentos/1/leituras/ultima"] = { MockResponse().setResponseCode(500) }
         carregar()
 
         assertEquals(Semaforo.SEM_LEITURA, itens().first { it.equipamento.id == 1L }.semaforo)
@@ -91,9 +91,9 @@ class PainelViewModelTest {
 
     @Test
     fun `atualizacao que volta a responder limpa o aviso`() {
-        rotas["/api/equipamentos/1/leituras?periodo=24h"] = { MockResponse().setResponseCode(500) }
+        rotas["/api/equipamentos/1/leituras/ultima"] = { MockResponse().setResponseCode(500) }
         carregar()
-        rotas["/api/equipamentos/1/leituras?periodo=24h"] = { json("[${leituraJson(11, 1, 3.0, "2026-11-15T10:10:00+00:00")}]") }
+        rotas["/api/equipamentos/1/leituras/ultima"] = { json(leituraJson(11, 1, 3.0, "2026-11-15T10:10:00+00:00")) }
         atualizar()
 
         assertEquals(Semaforo.VERDE, itens().first { it.equipamento.id == 1L }.semaforo)

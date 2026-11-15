@@ -3,7 +3,6 @@ package br.com.fiap.friosolidario.data
 import br.com.fiap.friosolidario.core.ErroApp
 import br.com.fiap.friosolidario.core.Resultado
 import br.com.fiap.friosolidario.core.chamar
-import br.com.fiap.friosolidario.core.mapear
 import br.com.fiap.friosolidario.dominio.Semaforo
 import br.com.fiap.friosolidario.dominio.semaforo
 import kotlinx.coroutines.async
@@ -31,7 +30,7 @@ class EquipamentoRepository(
 
     /**
      * Equipamentos ativos com a última leitura de cada um. A lista da API não traz leitura, então
-     * a série de cada equipamento é buscada em paralelo. Uma série que falha deixa só aquele
+     * a última de cada equipamento é buscada em paralelo. Uma busca que falha deixa só aquele
      * equipamento sem leitura e marcado com o erro (quem mostra decide se mantém a leitura anterior);
      * se nenhuma responde, o painel mostra o erro em vez de tudo cinza.
      */
@@ -63,13 +62,14 @@ class EquipamentoRepository(
         )
     }
 
-    /** A leitura mais recente: das últimas 24 h ou, se não houver, dos últimos 7 dias. */
-    suspend fun ultimaLeitura(equipamentoId: Long): Resultado<LeituraDto?> {
-        val dia = leituras(equipamentoId, Periodo.H24)
-        if (dia is Resultado.Falha || (dia as Resultado.Ok).valor.isNotEmpty()) {
-            return dia.mapear { it.lastOrNull() }
-        }
-        return leituras(equipamentoId, Periodo.D7).mapear { it.lastOrNull() }
+    /**
+     * A leitura mais recente, de quando for (`null` se o equipamento nunca enviou nenhuma). É uma
+     * chamada pequena por equipamento; a série inteira só é baixada pela tela de detalhe.
+     */
+    suspend fun ultimaLeitura(equipamentoId: Long): Resultado<LeituraDto?> = chamar(aoExpirar) {
+        val resposta = api.ultimaLeitura(equipamentoId)
+        if (!resposta.isSuccessful) throw retrofit2.HttpException(resposta)
+        resposta.body()
     }
 
     suspend fun equipamento(id: Long): Resultado<EquipamentoDto> = chamar(aoExpirar) { api.equipamento(id) }

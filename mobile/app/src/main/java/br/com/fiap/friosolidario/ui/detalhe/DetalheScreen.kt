@@ -241,7 +241,7 @@ private fun Cabecalho(equipamento: EquipamentoDto, ultima: LeituraDto?, agora: I
         Spacer(Modifier.height(4.dp))
         Text(
             if (ultima == null) {
-                "Nenhuma leitura nos últimos 7 dias"
+                "Nenhuma leitura recebida ainda"
             } else {
                 "Última leitura ${tempoDecorrido(ultima.registradaEm, agora)} (${diaEHora(ultima.registradaEm)}) · " +
                     "umidade ${umidade(ultima.umidade)} · porta ${if (ultima.portaAberta) "aberta" else "fechada"}"

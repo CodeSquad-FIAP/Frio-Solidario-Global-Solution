@@ -210,7 +210,7 @@ private fun LinhaDoEquipamento(item: EquipamentoNoPainel, agora: Instant, aoAbri
                 Text(
                     when {
                         leitura == null && item.erroDaLeitura != null -> "Não foi possível buscar a leitura agora"
-                        leitura == null -> "Nenhuma leitura nos últimos 7 dias"
+                        leitura == null -> "Nenhuma leitura recebida ainda"
                         // O horário é o do dado (registradaEm), nunca o de quando a tela abriu.
                         item.semaforo == Semaforo.SEM_SINAL -> "Sem sinal desde ${diaEHora(leitura.registradaEm)}"
                         else -> buildString {

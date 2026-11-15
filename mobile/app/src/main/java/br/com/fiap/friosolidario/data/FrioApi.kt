@@ -26,6 +26,10 @@ interface FrioApi {
     suspend fun criarEquipamento(@Body corpo: EquipamentoRequest): EquipamentoDto
 
     /** Série em ordem cronológica (a mais antiga primeiro). [periodo] é `24h` ou `7d`. */
+    /** 200 com a leitura mais recente, ou 204 (corpo vazio) se o equipamento nunca enviou nenhuma. */
+    @GET("api/equipamentos/{id}/leituras/ultima")
+    suspend fun ultimaLeitura(@Path("id") equipamentoId: Long): retrofit2.Response<LeituraDto>
+
     @GET("api/equipamentos/{id}/leituras")
     suspend fun leituras(@Path("id") equipamentoId: Long, @Query("periodo") periodo: String): List<LeituraDto>
 
