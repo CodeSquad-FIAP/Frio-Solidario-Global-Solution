@@ -112,7 +112,7 @@ só equipamento falha foi reproduzido em teste automatizado, não no aparelho.
 ## Interface refeita
 
 Depois das duas execuções acima a interface foi redesenhada (ver "Direção visual" em
-`docs/superpowers/specs/2026-11-15-app-mobile-design.md`). **As capturas de `00-` a `65-` mostram a
+`docs/app-mobile-design.md`). **As capturas de `00-` a `65-` mostram a
 interface antiga**; o comportamento que elas documentam não mudou, só a aparência e a navegação
 (Alertas e Lotes saíram do sino e do menu e foram para a barra inferior).
 

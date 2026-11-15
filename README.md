@@ -100,6 +100,26 @@ token, casos 5 e 6, a rota `/instituicoes/{id}/equipamentos` e o DELETE lógico 
 demais casos do plano (login, perfis, segurança, relatório) são verificados por chamada real, com
 evidência em `docs/`.
 
+## Documentação do projeto
+
+Onde está cada documento, para quem for conferir a entrega:
+
+| Documento | O que tem |
+|---|---|
+| `docs/entrega/Frio-Solidario-Entrega-15-11-2026.pdf` | documento consolidado da entrega (18 páginas): problema, arquitetura, modelo de dados, endpoints, segurança, regra do alerta, IoT, app, testes, divisão de trabalho, impacto, limitações, declaração de IA, como rodar e checklist item por item |
+| `docs/entrega/entrega-consolidada.html` | fonte do PDF (é daqui que ele é gerado) |
+| `docs/der.md` e `docs/der.png` | diagrama entidade-relacionamento das 6 tabelas e o dicionário de dados |
+| `docs/plano-de-testes.md` | os 9 casos planejados, com entrada, passos e resultado esperado |
+| `docs/execucao-dos-testes.md` | execução dos casos em 11/11, com requisição e resposta real de cada um |
+| `docs/evidencias-cenarios.md` | os cenários de IoT rodados contra PostgreSQL + Mosquitto + API, as saídas reais (§6.1–§6.6), os vídeos (§6.7–§6.9) e os limites declarados |
+| `docs/evidencias/app-mobile.md` | 73 capturas do app: fluxo normal, erros de conexão, banco vazio, tela pequena, tema escuro e a interface atual |
+| `docs/evidencias/caso-01..09` | um arquivo por caso de teste, com a evidência da execução |
+| `docs/evidencias/mqtt-ponte-ponta-a-ponta.md` | a ponte MQTT do broker ao banco, mensagem a mensagem |
+| `docs/evidencias/banco-schema-do-zero.md` | criação do banco do zero a partir de `db/schema.sql` e `db/seed.sql` |
+| `docs/validacao.md` | validação de campo e referências da frente IoT (Roger), com as fontes usadas |
+| `docs/app-mobile-design.md` | design do app aprovado antes da implementação (telas, navegação e direção visual) |
+| `docs/roteiro-pitch.md` | roteiro do vídeo de pitch — **fora do escopo desta entrega**, fica para o card do pitch |
+
 ## Login (demo)
 
 `POST /api/auth/login` devolve o token que as rotas protegidas exigem. Usuários da carga inicial
