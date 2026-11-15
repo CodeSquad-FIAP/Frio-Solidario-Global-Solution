@@ -406,7 +406,7 @@ instituição real foi usada; os dados do projeto são fictícios.
 | Item | Situação | Dono |
 |---|---|---|
 | App mobile: impressora física | o roteiro rodou em Fire TV (paisagem) e em celular em pé contra PostgreSQL 18.6, com a prévia de impressão do Android abrindo o PDF (`docs/evidencias/app-mobile.md`); falta só mandar para uma impressora de verdade | Kevin |
-| App mobile: roteiro na interface nova | a interface foi redesenhada em 15/11 e conferida tela a tela no celular, mas o roteiro de erros (API desligada, 401, banco vazio, PDF) só rodou na interface antiga; o trilho lateral de tablet não foi visto em aparelho | Kevin |
+| App mobile em tablet | a interface nova foi conferida em celular, com o roteiro de erros repetido (`docs/evidencias/app-mobile.md`); o trilho lateral de tela larga não foi visto em aparelho | Kevin |
 | Notificação fora do app | o alerta aparece com o app aberto (atualização a cada 10 s); não há push com o app fechado | grupo |
 | Sensor MQTT publicando ao vivo | a ponte da API está pronta e medida (mensagem do broker vira leitura e alerta em ~1 s); o script do sensor publicando é que ainda não existe no repositório | Roger |
 | Testes automatizados (xUnit) abrangentes | os casos 5, 6 e o 401 do caso 7 rodam sem banco (regra, serviço e API via TestServer); login com BCrypt, perfis, CRUD restante e relatório seguem verificados por chamada real, com evidência em `docs/` | Arthur |

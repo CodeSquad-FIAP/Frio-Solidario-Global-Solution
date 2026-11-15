@@ -128,7 +128,29 @@ normal e em 1,3×, e com o sistema em modo escuro (o app continua claro):
 | Lotes | `74-novo-visual-lotes.png` |
 | Formulário de lote | `75-novo-visual-formulario.png` |
 
-O roteiro completo (cenários 1 a 36) **não foi repetido** com a interface nova: API desligada em
-cada tela, 401, banco vazio, PDF, cadastro e resolução de alerta rodaram só na interface antiga. O
-trilho lateral de tela larga (tablet) não foi visto em aparelho nenhum. Os 116 testes automatizados
-passam, mas eles não cobrem layout.
+Depois disso o roteiro foi repetido na interface nova, no mesmo celular, com a API local sobre o
+banco em memória:
+
+| # | Cenário | Resultado |
+|---|---|---|
+| 37 | Equipamento fora da faixa sem alerta ainda (a API só abre na 3ª leitura seguida) | Linha vermelha sem o botão de alerta; na 3ª leitura o botão aparece e leva à aba Alertas |
+| 38 | Resolver o alerta com "Ajustei o equipamento" | Aviso "Alerta resolvido: ajustei o equipamento"; o histórico mostra a ação |
+| 39 | Detalhe em 7 dias, gerar o PDF e imprimir | Gráfico com 993 leituras; "Relatório pronto"; a prévia de impressão do Android abre o PDF de 25 páginas |
+| 40 | Cadastro de equipamento com mínima maior que a máxima | Erro no campo, nada enviado (`76-`); corrigido, o equipamento aparece no painel como "sem leitura" |
+| 41 | Marcar um lote como perdido | Confirmação, aviso e o balanço do cabeçalho recalculado |
+| 42 | Cadastro de lote sem validade | Erro no campo de validade |
+| 43 | API desligada: painel e lotes já carregados | Faixa "Sem conexão" e o conteúdo anterior na tela |
+| 44 | API desligada: alertas e detalhe abertos do zero | Tela "Sem conexão" com "Tentar de novo" |
+| 45 | API cai com o detalhe aberto | Faixa de erro no topo, leitura e gráfico continuam |
+| 46 | API desligada ao gerar o PDF | Erro dentro do diálogo, com "Tentar de novo" |
+| 47 | API desligada ao enviar o lote | Erro acima do botão, campos preservados; com a API de volta, "Tentar de novo" salva |
+| 48 | Token recusado (401) | Volta ao login com "Sua sessão expirou. Entre de novo." (`77-`) |
+| 49 | Login sem API e com senha errada | "Sem conexão…" com "Tentar de novo" e "E-mail ou senha incorretos.", mensagens diferentes |
+| 50 | Banco sem equipamentos, alertas e lotes | Os três estados vazios (`78-`) |
+
+Em nenhum desses cenários o app fechou (`logcat` sem `FATAL EXCEPTION`).
+
+Fica sem conferência na interface nova: o trilho lateral de tela larga (tablet) não foi visto em
+aparelho nenhum, e os cenários 25 a 28 (PostgreSQL) não dependem da interface e não foram refeitos.
+Uma vez durante o roteiro o app apareceu na tela de login sem que o teste tivesse pedido para sair;
+não se repetiu ao sair com "voltar" nem ao reiniciar o app, e a causa não foi identificada.
