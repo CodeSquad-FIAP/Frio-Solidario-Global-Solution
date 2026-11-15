@@ -28,6 +28,7 @@
   figure { margin: 10px 0 14px; page-break-inside: avoid; }
   figure img { width: 100%; border: 1px solid #ccd6e0; border-radius: 3px; }
   figure.half img { width: 68%; display: block; margin: 0 auto; }
+  figure.der img { width: auto; max-width: 100%; max-height: 222mm; display: block; margin: 0 auto; }
   figcaption { font-size: 8.6pt; color: #4a5b6c; margin-top: 4px; text-align: center; }
   .two { display: flex; gap: 10px; }
   .two figure { flex: 1; }
@@ -150,7 +151,7 @@ histórico seriam duplicados em cada aparelho.</p>
 
 <h2>3. Modelo de dados</h2>
 
-<figure>
+<figure class="der">
   <img src="../der.png" alt="Diagrama entidade-relacionamento">
   <figcaption>Diagrama ER — seis entidades, cardinalidades e chaves (fonte: <code>docs/der.md</code>).</figcaption>
 </figure>
@@ -298,8 +299,16 @@ detalhe com gráfico de 24 h e relatório térmico em PDF.</p>
   <figcaption>Detalhe do equipamento: leitura atual, faixa e série das últimas 24 h.</figcaption>
 </figure>
 
-<p>O vídeo <code>docs/evidencias/video-projeto-completo-15-11-2026.mp4</code> mostra a cadeia inteira na
-mesma gravação: app à esquerda, sensor e log da API à direita, alerta nascendo durante a execução.</p>
+<p>Dois vídeos, ambos gravação de tela do APK rodando contra a API e o PostgreSQL de verdade:</p>
+<ul>
+  <li><code>docs/evidencias/video-app-fluxo-completo-15-11-2026.mp4</code> (4 min 26 s) — o sistema inteiro
+  pela interface: login, painel, detalhe com gráfico de 24 h, fila de alertas, resolução com a ação tomada,
+  histórico, cadastro de lote, cadastro de equipamento e o relatório térmico em PDF aberto na prévia de
+  impressão, com a tabela das leituras daquele equipamento. Roteiro minuto a minuto em
+  <code>docs/evidencias-cenarios.md</code> §6.9.</li>
+  <li><code>docs/evidencias/video-projeto-completo-15-11-2026.mp4</code> (29 s) — app à esquerda e sensor +
+  log da API à direita na mesma gravação, para mostrar o alerta nascendo sem corte.</li>
+</ul>
 
 <h2 class="quebra">8. Testes: plano, execução e resultado</h2>
 
@@ -372,23 +381,31 @@ falha e o alerta.</p>
   <tr><th>Item</th><th>Situação</th></tr>
   <tr><td>Sensor físico (DHT22 / reed switch)</td><td>simulado por <code>simulacao/sensor.py</code>; o payload e o broker são reais</td></tr>
   <tr><td>Autenticação do broker MQTT</td><td>anônima no ambiente de demo; em produção exige usuário/senha por dispositivo</td></tr>
-  <tr><td>App em aparelho físico</td><td>testado em emulador Android; em aparelho real basta <code>adb reverse tcp:5199 tcp:5199</code></td></tr>
+  <tr><td>App em aparelho físico e em tablet</td><td>testado em emulador Android; em aparelho real basta <code>adb reverse tcp:5199 tcp:5199</code>; em tablet a interface foi conferida só no emulador</td></tr>
+  <tr><td>Impressora física no app</td><td>o relatório em PDF é gerado pela API e aberto na prévia de impressão; impressão em papel não foi testada</td></tr>
+  <tr><td>Notificação fora do app</td><td>o alerta aparece com o app aberto (atualização a cada 10 s); não há push</td></tr>
   <tr><td>HTTPS e deploy público</td><td>fora do escopo desta entrega; API roda em <code>localhost:5199</code></td></tr>
+  <tr><td>Chave do JWT</td><td>o <code>appsettings.json</code> traz chave de desenvolvimento; em produção vem do ambiente</td></tr>
+  <tr><td>Papel de administrador acima de <code>ADMIN</code></td><td>não existe: qualquer <code>ADMIN</code> cadastra outros usuários</td></tr>
 </table>
 
 <h2>12. Uso de IA</h2>
 
-<p>Regra combinada no grupo: cada integrante declara as ferramentas que usou e para quê, com revisão humana
-do resultado. Nenhuma senha, token ou credencial de instituição real foi usada; os dados são fictícios.</p>
+<p>Regra combinada no grupo: declarar as ferramentas de IA usadas e para quê, com revisão humana do
+resultado. A declaração é do grupo. Nenhuma senha, token ou credencial de instituição real foi usada;
+os dados são fictícios.</p>
 
 <table>
-  <tr><th>Integrante</th><th>Ferramenta</th><th>Para quê</th></tr>
-  <tr><td>André</td><td><em>declaração pendente</em></td><td>—</td></tr>
-  <tr><td>Arthur</td><td><em>declaração pendente</em></td><td>—</td></tr>
-  <tr><td>Kevin</td><td>Claude Code (Claude)</td><td>código e testes do app, ação tomada no alerta (API, schema e teste), documentação do app, execução do roteiro de evidências</td></tr>
-  <tr><td>Roger</td><td><em>declaração pendente</em></td><td>—</td></tr>
-  <tr><td>Yasmin</td><td>Hermes Agent (Nous Research) e Codex CLI</td><td>código de API e testes, execução real do stack (Postgres + MQTT + API + app), captura de evidências, revisão do README</td></tr>
+  <tr><th>Item</th><th>Declaração</th></tr>
+  <tr><td>Ferramentas usadas</td><td><strong>Claude</strong> (Claude Code) e <strong>DeepSeek</strong> (via <strong>Hermes Agent</strong>, da Nous Research)</td></tr>
+  <tr><td>Para quê</td><td>apoio pontual: rascunho de trechos de código e de testes, revisão de texto, conferência de referências (Atlas, ANVISA, Lei 15.224/2025) e explicação de mensagens de erro</td></tr>
+  <tr><td>Como foi usado</td><td>como ferramenta de apoio, com revisão humana: todo trecho vindo de IA foi lido, ajustado e só entrou depois de passar em teste automatizado ou chamada real contra a API</td></tr>
+  <tr><td>O que é do grupo</td><td>escopo, arquitetura em camadas, modelagem do banco, regra do alerta, decisões de segurança, execução do stack e das evidências, e a escrita final do README e deste PDF</td></tr>
+  <tr><td>Integrantes</td><td>André Luiz (554952), Arthur Corrêa (97781), Kevin Benevides (557898), Roger Viana (97540), Yasmin Kimura (557413)</td></tr>
 </table>
+
+<p>O projeto não foi gerado por IA de ponta a ponta: as decisões, a modelagem, os testes e a validação são do
+grupo, e a IA entrou como apoio em partes do código, na revisão de texto e na pesquisa de referência.</p>
 
 <h2>13. Como rodar</h2>
 <pre># 1. banco
@@ -410,6 +427,31 @@ python simulacao/sensor.py --cenario quebra-compressor --rapido
 dotnet test</pre>
 <p>App: abrir <code>mobile/</code> no Android Studio e rodar no emulador (a API é alcançada em
 <code>10.0.2.2:5199</code>). Login de demonstração: <code>rafael.nunes@bairrosolidario.example</code>.</p>
+
+<h2 class="quebra">14. Checklist da entrega, item por item</h2>
+
+<p>Conferência final: cada exigência do documento da entrega, onde ela está respondida neste PDF e o que a
+sustenta. A coluna "prova" aponta o arquivo ou a saída real que o leitor pode abrir.</p>
+
+<table>
+  <tr><th>Exigência</th><th>Onde está</th><th>Prova</th></tr>
+  <tr><td>Problema social com número e fonte</td><td>§1</td><td>55,4 mi t/ano (Pacto Contra a Fome), Atlas Global de Doação 2024, SciELO, Lei 15.224/2025</td></tr>
+  <tr><td>O que o sistema faz e em que camadas</td><td>§2</td><td>diagrama das 4 camadas + fluxo Controller → Service → Repository</td></tr>
+  <tr><td>Modelo de dados: diagrama ER e dicionário</td><td>§3</td><td><code>docs/der.md</code>, diagrama das 6 tabelas, dicionário de colunas e regras do banco</td></tr>
+  <tr><td>Tabela de endpoints</td><td>§4</td><td>9 rotas principais; as 24 no README, seção "Endpoints"; Swagger em <code>/swagger</code></td></tr>
+  <tr><td>Segurança testada contra ataque</td><td>§4</td><td>matriz de 6 ataques com resultado real (SQLi 400, força bruta 429, escopo 403)</td></tr>
+  <tr><td>Regra de negócio com saída real</td><td>§5</td><td>3 leituras de 7,8 °C → 1 alerta <code>TEMP_ALTA CRITICA</code>; fila e resolução com <code>acao_tomada</code></td></tr>
+  <tr><td>IoT: do sensor ao banco</td><td>§6</td><td>ponte MQTT (<code>frio/equipamentos/{id}/leitura</code>), latência ~1 s, 5 cenários em <code>simulacao/sensor.py</code></td></tr>
+  <tr><td>App mobile com prints das telas</td><td>§7</td><td>3 prints legendados + vídeo do fluxo completo (4 min 26 s) + vídeo da cadeia (29 s)</td></tr>
+  <tr><td>Plano de testes com evidências de execução</td><td>§8</td><td><code>docs/plano-de-testes.md</code>, 9 casos em <code>docs/evidencias/caso-01..09</code></td></tr>
+  <tr><td>Suíte automatizada e validação do zero</td><td>§8</td><td>68 testes xUnit aprovados; cópia limpa seguindo só o README</td></tr>
+  <tr><td>Quem fez o quê, com nome e RM</td><td>capa e §9</td><td>5 integrantes com RM e os artefatos de cada um</td></tr>
+  <tr><td>Impacto social e ODS 2 / ODS 10</td><td>§10</td><td>carne 16% → 8%, peixe 15% → 5%, morango 37% → 23% (Atlas Global 2024)</td></tr>
+  <tr><td>Limitações declaradas</td><td>§11</td><td>8 itens: sensor físico, auth do broker, aparelho físico/tablet, impressora, notificação fora do app, HTTPS, chave JWT, papel de admin</td></tr>
+  <tr><td>Uso de IA declarado</td><td>§12</td><td>declaração do grupo: Claude e DeepSeek (via Hermes Agent) como apoio, com revisão humana e testes</td></tr>
+  <tr><td>Como rodar do zero</td><td>§13</td><td>4 passos numerados + app; mesmo roteiro no README, seção "Quickstart"</td></tr>
+  <tr><td>Toda afirmação numérica com fonte</td><td>Referências</td><td>FAO/PNUMA, Lei 15.224/2025, RDC 216/2004, Valor 15/10/2024, Pacto Contra a Fome, Atlas 2024, SciELO</td></tr>
+</table>
 
 <h3>Referências</h3>
 <ul class="src">

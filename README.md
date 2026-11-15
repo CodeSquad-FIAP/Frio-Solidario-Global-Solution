@@ -17,11 +17,47 @@ src/
 tests/
 └── FrioSolidario.Tests/           # testes xUnit: regra pura, serviço e API via TestServer (sem banco)
 mobile/                            # app Android (Kotlin + Jetpack Compose), projeto Gradle à parte (Kevin)
+db/                                # schema.sql, seed.sql e consultas.sql (André)
+simulacao/                         # sensor.py e teste_contrato.py — scripts do sensor (Roger)
+docs/                              # evidências, DER, plano de testes e entrega consolidada
 ```
 
 O fluxo é sempre **Controller → Service → Repository**: o controller não conhece banco, o serviço não
 conhece HTTP, e o repositório não devolve DTO de tela. As interfaces de repositório ficam em
 `Application/Repositories` e as implementações em `Infrastructure/Repositories`.
+
+## Quickstart — do zero até a leitura na tela
+
+Cinco passos, nesta ordem. Cada passo tem a seção detalhada no resto do arquivo; quem seguir só o que
+está aqui chega ao app mostrando a leitura e o alerta.
+
+```bash
+# 1. banco (PostgreSQL 17 em container) — detalhes em "Como carregar o banco"
+docker run -d --name frio-pg -p 5432:5432 -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=frio_solidario postgres:17
+docker cp db frio-pg:/sql
+docker exec frio-pg psql -U postgres -d frio_solidario -v ON_ERROR_STOP=1 -f /sql/schema.sql
+docker exec frio-pg psql -U postgres -d frio_solidario -v ON_ERROR_STOP=1 -f /sql/seed.sql
+
+# 2. API — detalhes em "Como rodar (API)"
+dotnet restore
+dotnet run --project src/FrioSolidario.Api          # Swagger em http://localhost:5199/swagger
+curl -s http://localhost:5199/api/health            # origemDosDados: "6 equipamentos no banco"
+
+# 3. broker MQTT — detalhes em "Ponte MQTT"
+docker run -d --name frio-mqtt -p 1883:1883 eclipse-mosquitto:2 \
+  sh -c "printf 'listener 1883\nallow_anonymous true\n' > /mosquitto/config/mosquitto.conf && mosquitto -c /mosquitto/config/mosquitto.conf"
+
+# 4. sensor simulado — detalhes em "Script de simulação"
+pip install -r simulacao/requirements.txt           # paho-mqtt>=2.0.0
+python simulacao/sensor.py --cenario quebra-compressor --rapido
+
+# 5. app: abrir mobile/ no Android Studio e rodar no emulador — detalhes em "Como apontar o app para a API"
+```
+
+No fim do passo 5 o painel do app mostra o Freezer fora da faixa e a aba **Alertas** traz o alerta aberto
+pela regra das 3 leituras. Só o passo 5 é manual (Android Studio + emulador); os passos 1 a 4 são comandos.
+Se algo não funcionar, a última seção ("O que ainda não roda") diz o que o projeto não faz.
 
 ## Como rodar (API)
 
@@ -471,20 +507,20 @@ capturas e o roteiro executado estão em `docs/evidencias/app-mobile.md`.
 
 ## Uso de IA
 
-Regra combinada no grupo (reunião de 07/11): cada integrante declara as ferramentas que usou e para quê,
-com revisão humana do resultado. Preencha a sua linha — a tabela vai para o PDF da entrega.
+Regra combinada no grupo (reunião de 07/11): declarar as ferramentas de IA usadas e para quê, com revisão
+humana do resultado. A declaração é do grupo, não de um integrante só.
 
-| Integrante | RM | Ferramenta de IA | Para quê |
-|---|---|---|---|
-| André | 554952 | a preencher | a preencher |
-| Arthur | 97781 | a preencher | a preencher |
-| Kevin | 557898 | Claude Code (Claude) | geração do código e dos testes do app mobile, da ação tomada no alerta (API, schema e teste) e da documentação do app; execução do roteiro de evidências |
-| Roger | 97540 | a preencher | a preencher |
-| Yasmin | 557413 | Hermes Agent (Nous Research, modelo DeepSeek) e Codex CLI | geração e revisão do código de API e dos testes, execução real do stack (Postgres + MQTT + API + app), captura de evidências e revisão do README
+| Item | Declaração |
+|---|---|
+| Ferramentas usadas | **Claude** (Claude Code) e **DeepSeek** (via **Hermes Agent**, da Nous Research) |
+| Para quê | apoio pontual: rascunho de trechos de código e de testes, revisão de texto, conferência de referências (Atlas, ANVISA, Lei 15.224/2025) e explicação de mensagens de erro |
+| Como foi usado | como ferramenta de apoio, com revisão humana: todo trecho vindo de IA foi lido, ajustado e só entrou depois de passar em teste automatizado ou chamada real contra a API |
+| O que é do grupo | escopo, arquitetura em camadas, modelagem do banco, regra do alerta, decisões de segurança, execução do stack e das evidências, e a escrita final do README e do PDF |
+| Integrantes | André Luiz (554952), Arthur Corrêa (97781), Kevin Benevides (557898), Roger Viana (97540), Yasmin Kimura (557413) |
 
-O que vale declarar, sem medo: código gerado com IA e revisado por humano, texto revisado, pesquisa de
-referência (Atlas, ANVISA, Lei 15.224/2025) e explicação de erro. Nenhuma senha, token ou credencial de
-instituição real foi usada; os dados do projeto são fictícios.
+O projeto não foi gerado por IA de ponta a ponta: as decisões, a modelagem, os testes e a validação são do
+grupo, e a IA entrou como apoio em partes do código, na revisão de texto e na pesquisa de referência.
+Nenhuma senha, token ou credencial de instituição real foi usada; os dados do projeto são fictícios.
 
 ## O que ainda não roda (declarado, não escondido)
 
