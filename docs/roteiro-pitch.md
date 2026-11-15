@@ -1,96 +1,154 @@
-# Roteiro de Demo ao Vivo & Defesa para a Banca — Frente IoT
+# Storyboard para Vídeo do Pitch — Frente IoT e Validação
 
-**Responsável:** Roger · **Duração alvo:** 2 a 3 minutos dentro do pitch geral
+**Responsável:** Roger · **Formato:** vídeo gravado (não é apresentação ao vivo) · **Duração alvo:** 2 a 3 minutos
 
-> Guia prático da apresentação da frente de IoT e validação. Sincroniza o **script falado** com os
-> **comandos no terminal** e prepara as respostas às perguntas difíceis da banca.
-
----
-
-## 1. Script Falado (passo a passo)
-
-### Passo 1 — Abertura: da planilha de papel ao risco silencioso (~30 s)
-
-> **Fala:** *"Hoje, quem recebe doação de perecível confere a temperatura numa planilha de papel,
-> assinada por turno. Entre uma leitura e outra — principalmente de madrugada — um freezer pode falhar
-> em silêncio e a doação que ia alimentar famílias vira lixo. A validação de campo confirmou: grandes
-> centrais já têm telemetria, mas ONGs receptoras e comércios doadores menores não têm como saber que o
-> equipamento falhou."*
-
-> **Ação:** mostrar `docs/validacao.md` (recorte de mercado) ou apenas citar a conclusão.
-
-### Passo 2 — Demo ao vivo: o alerta surgindo na aplicação (~60–90 s)
-
-> **Fala:** *"Vou provar com o nosso sistema. Um script simula o sensor — o mesmo contrato MQTT que um
-> ESP32 com DHT22 e Reed Switch usaria em produção. Primeiro, o cenário que não deve incomodar
-> ninguém: uma porta aberta por 40 segundos, carga e descarga normal."*
-
-**Comando (Cenário 2B — anti-alarme-falso):**
-```bash
-# broker
-docker run -d --name frio-mqtt -p 1883:1883 eclipse-mosquitto:2 \
-  sh -c "printf 'listener 1883\nallow_anonymous true\n' > /mosquitto/config/mosquitto.conf && mosquitto -c /mosquitto/config/mosquitto.conf"
-
-# API com a ponte ligada (em outro terminal, a partir da raiz do repositorio)
-Mqtt__Habilitado=true dotnet run --project src/FrioSolidario.Api
-
-# script: porta aberta 40s -> 0 alertas (equip. 6 = Padaria Sabor e Partilha)
-python3 simulacao/sensor.py --equipamento 6 --cenario porta-40s --rapido --conferir-api
-```
-
-> **Fala:** *"Nenhum alerta. Agora o cenário que vende o produto: a quebra do compressor. Três leituras
-> seguidas fora da faixa — e só na terceira o alerta aparece, sem duplicar."*
-
-**Comando (Cenário 1 — quebra de compressor, modo rápido):**
-```bash
-# No App Mobile / Swagger, logar na Instituicao 2 (Mercado Bairro Solidario):
-#   email: rafael.nunes@bairrosolidario.example  |  senha: Frio@2026
-python3 simulacao/sensor.py --equipamento 4 --perfil freezer --cenario quebra-compressor --rapido --conferir-api
-```
-
-> **Fala:** *"Veja o alerta `TEMP_ALTA` surgindo na aplicação. Uma leitura fora não gera nada — evitamos
-> falso positivo. Três leituras seguidas confirmam a falha, e o alerta não se repete a cada leitura."*
-
-### Passo 3 — Fechamento: resiliência e custo (~30 s)
-
-> **Fala:** *"O sistema é resiliente: QoS 1 garante que a leitura não se perde se a rede oscilar, e a
-> regra de alerta é idempotente — não enche a fila do app durante uma falha real. E é barato: um ESP32
-> com DHT22 e Reed Switch custa poucas dezenas de reais por ponto, sem telemetria industrial."*
-
-> **Ação:** apontar para `docs/evidencias-cenarios.md` (matriz de evidências) se a banca pedir prova.
+> Roteiro para criar o vídeo do pitch com IA: define **narração** e **o que aparece na tela** por cena.
+> Os prompts de renderização ficam em [`docs/prompts-renderizacao.md`](prompts-renderizacao.md).
+>
+> Use em conjunto com o acervo de recursos reais (prints, testes, docs) para fidelidade — só itens que
+> de fato existem no projeto entram no vídeo.
 
 ---
 
-## 2. FAQ da Banca — Perguntas Difíceis + Respostas Curtas
+## 🎬 Storyboard de Cenas
 
-### Q1 — "Por que vocês não usaram um sensor físico real?"
-**R:** *"A entrega usa simulação com o mesmo contrato MQTT de produção. O hardware físico (ESP32 + DHT22
-+ Reed Switch) está especificado e custa poucas dezenas de reais por ponto. A simulação prova a regra de
-negócio e a integração ponta a ponta — sensor → MQTT → API → alerta — sem depender de hardware na demo."*
+### Cena 0 — Capa (5 s)
+**Narração:** *"Frio Solidário — monitoramento da cadeia fria que salva alimentos doados."*
 
-### Q2 — "E se acabar a luz ou a internet na ONG?"
-**R:** *"Em produção, o ESP32 tem buffer local em memória flash/NVS: se a internet cair, as leituras
-ficam armazenadas e são reenviadas quando a conexão volta. O QoS 1 do MQTT garante que a mensagem não se
-perde no meio do caminho. Na demo, o broker é local, então não depende de internet externa."*
+**Na tela:** logo + nome + tagline sobre um fundo de câmera fria/mercado.
 
-### Q3 — "Por que esperar 3 leituras (6 minutos) e não alertar na primeira leitura fora?"
-**R:** *"Porque um pico momentâneo — porta abrindo por um minuto, degelo automático — não é uma falha.
-Alertar na primeira leitura geraria fadiga de alerta e o operador pararia de confiar no sistema. Três
-leituras seguidas confirmam falha contínua em ~6 minutos, bem abaixo da meta de 15 minutos do pitch, e
-sem falso positivo."*
-
-### Q4 — "Por que 5 minutos para a porta e não 1 minuto?"
-**R:** *"Carga e descarga normal leva dezenas de segundos. Se alertássemos em 1 minuto, toda operação
-legítima geraria alerta. Cinco minutos separam a abertura operacional da porta esquecida — a causa mais
-comum de perda de frio — mantendo o alerta confiável. Acima de 15 minutos, a severidade sobe para ALTA."*
+> 🎨 Prompt em `docs/prompts-renderizacao.md` → Cena 0
 
 ---
 
-## 3. Checklist do dia da apresentação
+### Cena 1 — O problema: a planilha de papel (10 s)
+**Narração:** *"Hoje, quem recebe doação de perecível confere a temperatura numa planilha de papel,
+assinada por turno. Entre uma leitura e outra — principalmente de madrugada — um freezer pode falhar em
+silêncio."*
 
-- [ ] Broker Mosquitto rodando (`docker ps` mostra `frio-mqtt`).
-- [ ] API rodando com `Mqtt__Habilitado=true`.
-- [ ] Script `simulacao/sensor.py` testado nos cenários 1 e 2B, com banco recém-carregado do `seed.sql`.
-- [ ] Vídeo plano B gravado (ver checklist em `docs/evidencias-cenarios.md`).
-- [ ] `docs/validacao.md`, `docs/evidencias-cenarios.md` e `docs/roteiro-pitch.md` acessíveis.
-- [ ] Ensaio do FAQ (seção 2) com o grupo.
+**Na tela:** close de uma planilha de papel com colunas de temperatura preenchidas à mão; relógio
+marcando 03:00; silhueta de uma câmara fria escura.
+
+> 🎨 Prompt em `docs/prompts-renderizacao.md` → Cena 1
+
+---
+
+### Cena 2 — O custo da falha silenciosa (10 s)
+**Narração:** *"Uma falha na madrugada, e a doação que ia alimentar famílias vira lixo. Passa a ser
+prejuízo e, muitas vezes, risco sanitário."*
+
+**Na tela:** alimentos perecíveis (laticínios/congelados) sendo descartados; transição para o impacto em
+famílias.
+
+> 🎨 Prompt em `docs/prompts-renderizacao.md` → Cena 2
+
+---
+
+### Cena 3 — A solução: sensores + MQTT + API + alerta (15 s)
+**Narração:** *"Nosso sistema coloca um sensor em cada equipamento: mede temperatura, umidade e abertura
+de porta. Um ESP32 com DHT22 e um reed switch publicam a cada dois minutos via MQTT. A API compara com a
+faixa segura de cada equipamento e avisa o voluntário antes do lote ser perdido."*
+
+**Na tela:** diagrama animado do fluxo `ESP32 → MQTT → API .NET → App`. Mostrar o app com o alerta
+surgindo.
+
+> 🎨 Prompt em `docs/prompts-renderizacao.md` → Cena 3
+
+---
+
+### Cena 4 — Anti-alarme-falso: a prova que evita fadiga (10 s)
+**Narração:** *"Portas abrem o tempo todo para carga e descarga. Por isso, exigimos confirmação: uma porta
+aberta por 40 segundos não gera nada — é operação normal. Só alerta quando há uma falha de verdade."*
+
+**Na tela:** porta de câmara abrindo e fechando (40 s, sem alarme) vs. porta ficando aberta (sem alarme até
+o limite).
+
+> 🎨 Prompt em `docs/prompts-renderizacao.md` → Cena 4
+
+---
+
+### Cena 5 — A quebra do compressor: 3 leituras, 1 alerta (10 s)
+**Narração:** *"Se um compressor falha, a temperatura sobe. Na terceira leitura seguida fora da faixa, o
+alerta crítico chega — em minutos, bem abaixo dos 15 que o alimento aguenta. E um alerta só: nada de
+notificação duplicada a cada leitura."*
+
+**Na tela:** gráfico de temperatura subindo (4 → 6 → 7,8 °C); ponto onde o alerta crítico dispara na 3ª
+leitura; mostrando que a 4ª não duplica.
+
+> 🎨 Prompt em `docs/prompts-renderizacao.md` → Cena 5
+
+---
+
+### Cena 6 — Baixo custo e hardware acessível (8 s)
+**Narração:** *"E é barato: um ESP32 com dois sensores custa poucas dezenas de reais por ponto — acesso a
+telemetria antes só possível com sistemas industriais de milhares de reais."*
+
+**Na tela:** ESP32 físico + DHT22 + reed switch sobre uma mesa; legenda de custo "~R$ 70 por ponto".
+
+> 🎨 Prompt em `docs/prompts-renderizacao.md` → Cena 6
+
+---
+
+### Cena 7 — Fechamento / CTA (8 s)
+**Narração:** *"Frio Solidário: comida boa que chega a quem precisa — e nunca vira lixo por uma falha que
+ninguém viu."*
+
+**Na tela:** logo + contato do grupo + tagline final sobre fundo acolhedor.
+
+> 🎨 Prompt em `docs/prompts-renderizacao.md` → Cena 7
+
+---
+
+## 🎙️ Narração completa (texto único para locução)
+
+"Frio Solidário — monitoramento da cadeia fria que salva alimentos doados.
+
+Hoje, quem recebe doação de perecível confere a temperatura numa planilha de papel, assinada por turno.
+Entre uma leitura e outra — principalmente de madrugada — um freezer pode falhar em silêncio.
+
+Uma falha na madrugada, e a doação que ia alimentar famílias vira lixo. Passa a ser prejuízo e, muitas
+vezes, risco sanitário.
+
+Nosso sistema coloca um sensor em cada equipamento: mede temperatura, umidade e abertura de porta. Um
+ESP32 com DHT22 e um reed switch publicam a cada dois minutos via MQTT. A API compara com a faixa segura
+de cada equipamento e avisa o voluntário antes do lote ser perdido.
+
+Portas abrem o tempo todo para carga e descarga. Por isso, exigimos confirmação: uma porta aberta por 40
+segundos não gera nada — é operação normal. Só alerta quando há uma falha de verdade.
+
+Se um compressor falha, a temperatura sobe. Na terceira leitura seguida fora da faixa, o alerta crítico
+chega — em minutos, bem abaixo dos 15 que o alimento aguenta. E um alerta só: nada de notificação
+duplicada a cada leitura.
+
+E é barato: um ESP32 com dois sensores custa poucas dezenas de reais por ponto — acessível para quem antes
+só podia sonhar com telemetria industrial.
+
+Frio Solidário: comida boa que chega a quem precisa — e nunca vira lixo por uma falha que ninguém viu."
+
+---
+
+## 🧪 Limitações e fidelidade (importante para renderização com IA)
+
+- **O hardware físico (ESP32/DHT22/reed switch) não foi montado** — a entrega é via **simulação** em
+  `simulacao/sensor.py`. As cenas de hardware (Cena 6) são **ilustrativas**; não afirmar que foi testado
+  com hardware real.
+- Os **números** (3 leituras, 40 s, 15 min, ~R$ 70) são **reais** e vêm de `RegraDeAlerta.cs` e
+  `docs/evidencias-cenarios.md`.
+- Os **prints do app** e **testes reais** estão em `docs/evidencias/` e podem substituir quaisquer cenas
+  geradas por IA, mantendo fidelidade:
+  - App mobile: `docs/evidencias/app/*.png` (login, painel, alerta, relatório PDF).
+  - Swagger/terminal: `docs/evidencias/prints/*.png` (swagger + `dotnet test` verde).
+- **Recomendação:** para máxima credibilidade, intercale o vídeo gerado por IA com **capturas reais** do
+  app e do terminal executando os cenários (`dotnet test` e `unittest`), em vez de só imagens sintéticas.
+
+---
+
+## ✅ Checklist de produção do vídeo
+
+- [ ] Definir duração final (alvo: 2 a 3 min) e cortar cenas se preciso.
+- [ ] Gerar cada cena com os prompts de `docs/prompts-renderizacao.md` em estilo consistente.
+- [ ] Gravar a locução (texto único da seção acima) ou gerar com IA.
+- [ ] **Intercalar capturas reais:** `dotnet test` (66 OK), `unittest` (4/4 OK), prints do app com alerta.
+- [ ] Ajustar ritmo: cortar pausas, sincronizar narração com o visual.
+- [ ] Revisar fidelidade: não mostrar hardware físico como se tivesse sido testado.
+- [ ] Exportar em alta resolução (16:9) com legenda opcional.
