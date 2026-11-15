@@ -2,6 +2,7 @@ package br.com.fiap.friosolidario.core
 
 import android.content.Context
 import br.com.fiap.friosolidario.data.AuthRepository
+import br.com.fiap.friosolidario.data.EquipamentoRepository
 import br.com.fiap.friosolidario.data.FrioApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,4 +20,5 @@ class AppContainer(contexto: Context) {
     private val aoExpirar: suspend () -> Unit = { sessao.limpar(expirou = true) }
 
     val auth = AuthRepository(api, sessao)
+    val equipamentos = EquipamentoRepository(api, aoExpirar)
 }

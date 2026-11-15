@@ -16,7 +16,15 @@ fun TelasInternas(sessao: Sessao) {
     val nav = rememberNavController()
     NavHost(navController = nav, startDestination = Rotas.PAINEL) {
         composable(Rotas.PAINEL) {
-            PainelScreen(sessao = sessao)
+            PainelScreen(
+                sessao = sessao,
+                alertasAbertos = null,
+                aoAbrirEquipamento = {},
+                aoAbrirAlertas = {},
+                aoAbrirLotes = {},
+                aoNovoEquipamento = {},
+                aoAtualizar = {},
+            )
         }
     }
 }
