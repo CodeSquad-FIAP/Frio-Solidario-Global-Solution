@@ -4,6 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.com.fiap.friosolidario.ui.alertas.AlertasScreen
+import br.com.fiap.friosolidario.ui.cadastro.EquipamentoFormScreen
+import br.com.fiap.friosolidario.ui.lotes.LoteFormScreen
+import br.com.fiap.friosolidario.ui.lotes.LotesScreen
 import br.com.fiap.friosolidario.ui.alertas.ContadorDeAlertasViewModel
 import br.com.fiap.friosolidario.ui.comum.vm
 import androidx.navigation.NavType
@@ -18,6 +21,9 @@ import br.com.fiap.friosolidario.ui.painel.PainelScreen
 object Rotas {
     const val PAINEL = "painel"
     const val ALERTAS = "alertas"
+    const val NOVO_EQUIPAMENTO = "equipamentos/novo"
+    const val LOTES = "lotes"
+    const val NOVO_LOTE = "lotes/novo"
     const val DETALHE = "equipamentos/{id}"
     fun detalhe(id: Long) = "equipamentos/$id"
 }
@@ -34,10 +40,19 @@ fun TelasInternas(sessao: Sessao) {
                 alertasAbertos = alertasAbertos,
                 aoAbrirEquipamento = { nav.navigate(Rotas.detalhe(it)) },
                 aoAbrirAlertas = { nav.navigate(Rotas.ALERTAS) },
-                aoAbrirLotes = {},
-                aoNovoEquipamento = {},
+                aoAbrirLotes = { nav.navigate(Rotas.LOTES) },
+                aoNovoEquipamento = { nav.navigate(Rotas.NOVO_EQUIPAMENTO) },
                 aoAtualizar = contador::atualizar,
             )
+        }
+        composable(Rotas.NOVO_EQUIPAMENTO) {
+            EquipamentoFormScreen(sessao = sessao, aoVoltar = { nav.popBackStack() }, aoSalvar = { nav.popBackStack() })
+        }
+        composable(Rotas.LOTES) {
+            LotesScreen(sessao = sessao, aoVoltar = { nav.popBackStack() }, aoNovoLote = { nav.navigate(Rotas.NOVO_LOTE) })
+        }
+        composable(Rotas.NOVO_LOTE) {
+            LoteFormScreen(aoVoltar = { nav.popBackStack() }, aoSalvar = { nav.popBackStack() })
         }
         composable(Rotas.ALERTAS) {
             AlertasScreen(

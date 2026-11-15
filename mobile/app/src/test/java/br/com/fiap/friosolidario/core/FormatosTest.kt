@@ -44,4 +44,14 @@ class FormatosTest {
         assertEquals("2 dias 4 h", duracao(agora, agora.plusSeconds(2 * 86400L + 4 * 3600)))
         assertEquals("menos de 1 min", duracao(agora, agora.minusSeconds(60)))
     }
+
+    @Test
+    fun `prazo de validade do lote em relacao a hoje`() {
+        val hoje = java.time.LocalDate.of(2026, 11, 15)
+        assertEquals("vence hoje", prazoDeValidade(hoje, hoje))
+        assertEquals("vence amanhã", prazoDeValidade(hoje.plusDays(1), hoje))
+        assertEquals("vence em 5 dias", prazoDeValidade(hoje.plusDays(5), hoje))
+        assertEquals("venceu ontem", prazoDeValidade(hoje.minusDays(1), hoje))
+        assertEquals("venceu há 3 dias", prazoDeValidade(hoje.minusDays(3), hoje))
+    }
 }

@@ -54,3 +54,12 @@ fun duracao(de: Instant, ate: Instant): String {
         else -> "$resto min"
     }
 }
+
+/** "vence em 5 dias", "venceu ontem": o prazo do lote doado contado a partir de hoje. */
+fun prazoDeValidade(validade: LocalDate, hoje: LocalDate = LocalDate.now()): String =
+    when (val dias = java.time.temporal.ChronoUnit.DAYS.between(hoje, validade)) {
+        0L -> "vence hoje"
+        1L -> "vence amanhã"
+        -1L -> "venceu ontem"
+        else -> if (dias > 0) "vence em $dias dias" else "venceu há ${-dias} dias"
+    }
