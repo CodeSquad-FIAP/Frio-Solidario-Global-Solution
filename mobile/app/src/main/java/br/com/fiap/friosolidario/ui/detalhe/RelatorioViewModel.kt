@@ -15,16 +15,22 @@ import java.io.File
 import java.time.LocalDate
 
 enum class OpcaoDePeriodo(val rotulo: String, val dias: Long?) {
-    /** Mesmo padrão da API: hoje e os 7 dias anteriores. */
     SETE_DIAS("Últimos 7 dias", 7),
     TRINTA_DIAS("Últimos 30 dias", 30),
     ESCOLHER("Escolher as datas", null),
+    ;
+
+    /**
+     * Primeiro dia do período que termina em [hoje]. O fim é inclusivo na API, então "7 dias" é hoje
+     * e os 6 anteriores; voltar 7 dias inteiros daria um relatório de 8.
+     */
+    fun inicio(hoje: LocalDate): LocalDate? = dias?.let { hoje.minusDays(it - 1) }
 }
 
 data class RelatorioEstado(
     val aberto: Boolean = false,
     val opcao: OpcaoDePeriodo = OpcaoDePeriodo.SETE_DIAS,
-    val de: LocalDate = LocalDate.now().minusDays(7),
+    val de: LocalDate = OpcaoDePeriodo.SETE_DIAS.inicio(LocalDate.now())!!,
     val ate: LocalDate = LocalDate.now(),
     val baixando: Boolean = false,
     val erro: ErroApp? = null,
@@ -45,7 +51,7 @@ class RelatorioViewModel(
     /** Sempre abre no padrão (últimos 7 dias), contado a partir de hoje. */
     fun abrir() {
         val hoje = LocalDate.now()
-        _estado.value = RelatorioEstado(aberto = true, de = hoje.minusDays(7), ate = hoje)
+        _estado.value = RelatorioEstado(aberto = true, de = OpcaoDePeriodo.SETE_DIAS.inicio(hoje)!!, ate = hoje)
     }
 
     fun fechar() {
@@ -57,7 +63,7 @@ class RelatorioViewModel(
         val hoje = LocalDate.now()
         it.copy(
             opcao = opcao,
-            de = opcao.dias?.let(hoje::minusDays) ?: it.de,
+            de = opcao.inicio(hoje) ?: it.de,
             ate = if (opcao.dias != null) hoje else it.ate,
             erro = null,
             arquivo = null,

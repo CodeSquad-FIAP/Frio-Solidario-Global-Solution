@@ -53,7 +53,7 @@ class ValidacoesTest {
         assertEquals("O nome precisa ter de 3 a 150 caracteres.", erros[Campo.NOME])
         assertEquals("Informe um número, como -18 ou 2,5.", erros[Campo.TEMP_MIN])
         assertEquals("Informe um número, como -18 ou 2,5.", erros[Campo.TEMP_MAX])
-        assertEquals("A umidade máxima fica entre 1 e 100%.", erros[Campo.UMID_MAX])
+        assertEquals("A umidade máxima fica entre 0,01 e 100%.", erros[Campo.UMID_MAX])
     }
 
     @Test
@@ -66,7 +66,7 @@ class ValidacoesTest {
             "A temperatura fica entre -40 e 80 °C.",
             validarEquipamento("Estufa", "0", "80,5", "80")[Campo.TEMP_MAX],
         )
-        assertEquals("A umidade máxima fica entre 1 e 100%.", validarEquipamento("Câmara", "0", "4", "100,1")[Campo.UMID_MAX])
+        assertEquals("A umidade máxima fica entre 0,01 e 100%.", validarEquipamento("Câmara", "0", "4", "100,1")[Campo.UMID_MAX])
     }
 
     @Test
@@ -91,5 +91,13 @@ class ValidacoesTest {
         assertEquals("Informe o peso em kg, maior que zero.", erros[Campo.KG])
         assertEquals("Informe a data de validade.", erros[Campo.VALIDADE])
         assertEquals("Informe o peso em kg, maior que zero.", validarLote("abc", "abc", "muito", LocalDate.now())[Campo.KG])
+    }
+
+    @Test
+    fun `umidade maxima aceita a mesma faixa da api, de 0,01 a 100`() {
+        assertNull(validarEquipamento("Câmara", "0", "4", "0,01")[Campo.UMID_MAX])
+        assertNull(validarEquipamento("Câmara", "0", "4", "0,5")[Campo.UMID_MAX])
+        assertNull(validarEquipamento("Câmara", "0", "4", "100")[Campo.UMID_MAX])
+        assertEquals("A umidade máxima fica entre 0,01 e 100%.", validarEquipamento("Câmara", "0", "4", "0,009")[Campo.UMID_MAX])
     }
 }

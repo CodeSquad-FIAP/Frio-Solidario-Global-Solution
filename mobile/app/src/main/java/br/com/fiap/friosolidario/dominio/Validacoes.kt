@@ -19,7 +19,7 @@ fun paraDecimal(texto: String): Double? {
 
 private const val NUMERO_INVALIDO = "Informe um número, como -18 ou 2,5."
 private const val TEMPERATURA_FORA = "A temperatura fica entre -40 e 80 °C."
-private const val UMIDADE_FORA = "A umidade máxima fica entre 1 e 100%."
+private const val UMIDADE_FORA = "A umidade máxima fica entre 0,01 e 100%."
 
 fun validarEquipamento(nome: String, tempMin: String, tempMax: String, umidMax: String): Map<Campo, String> {
     val erros = linkedMapOf<Campo, String>()
@@ -39,7 +39,8 @@ fun validarEquipamento(nome: String, tempMin: String, tempMax: String, umidMax: 
     }
 
     val umidade = paraDecimal(umidMax)
-    if (umidade == null || umidade < 1.0 || umidade > 100.0) erros[Campo.UMID_MAX] = UMIDADE_FORA
+    // Mesma faixa do EquipamentoRequest da API: recusar aqui um valor que ela aceita seria inventar regra.
+    if (umidade == null || umidade < 0.01 || umidade > 100.0) erros[Campo.UMID_MAX] = UMIDADE_FORA
 
     return erros
 }

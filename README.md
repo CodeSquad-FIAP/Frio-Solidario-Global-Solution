@@ -314,7 +314,7 @@ sensor não tem canal para receber erro — o log é a evidência. Medido em
 |---|---|---|
 | Emulador Android | `http://10.0.2.2:5199` | nada além do emulador (`10.0.2.2` é o PC visto de dentro dele) |
 | Aparelho no USB | `http://localhost:5199` | `adb reverse tcp:5199 tcp:5199` (o cabo leva a porta do PC para o celular) |
-| Celular na mesma Wi-Fi | `http://<ip-do-pc>:5199` | API escutando em `0.0.0.0` e a porta liberada no firewall |
+| Celular na mesma Wi-Fi | `http://<ip-do-pc>:5199` | API escutando em `0.0.0.0`, a porta liberada no firewall e o app no build **debug** (os builds release e demo só aceitam HTTP sem TLS para `10.0.2.2` e `localhost`) |
 
 Para a API aceitar conexão de fora do PC (Wi-Fi na demo), suba com:
 
@@ -347,7 +347,7 @@ está em `mobile/app/src/main/java/br/com/fiap/friosolidario/dominio/Semaforo.kt
 
 ```bash
 cd mobile
-./gradlew testDebugUnitTest      # 116 testes, sem aparelho e sem API
+./gradlew testDebugUnitTest      # 120 testes, sem aparelho e sem API
 ./gradlew assembleDemo            # APK para demonstrar em aparelho: sem modo de depuração, bem mais fluido
 ./gradlew installDebug           # instala no emulador ou no aparelho conectado
 ```
@@ -381,7 +381,7 @@ capturas e o roteiro executado estão em `docs/evidencias/app-mobile.md`.
 | Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **60 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
 | Lotes doados | pronto — `/api/lotes` (lista, busca, cadastro e retirada), sempre na instituição do token; alimenta os indicadores de kg doados e perda |
-| App mobile | pronto — 5 telas + relatório em PDF integrados à API, em `mobile/`; 116 testes unitários; ver "App mobile (Kevin)" e `docs/evidencias/app-mobile.md` |
+| App mobile | pronto — 5 telas + relatório em PDF integrados à API, em `mobile/`; 120 testes unitários; ver "App mobile (Kevin)" e `docs/evidencias/app-mobile.md` |
 | Ação tomada na resolução do alerta | pronto — corpo opcional em `PATCH /api/alertas/{id}/resolver`, coluna `alerta.acao_tomada`; banco já carregado precisa de `db/migracoes/2026-11-15-alerta-acao-tomada.sql` |
 | IoT (MQTT) | ponte pronta na API (tópico `frio/equipamentos/{id}/leitura`, ver "Ponte MQTT"); falta só o script do sensor publicando, do Roger |
 
