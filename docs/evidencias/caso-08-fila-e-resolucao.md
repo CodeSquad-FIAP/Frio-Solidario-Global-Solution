@@ -212,3 +212,44 @@ RESOLVIDO | t | 2
 
 **Resultado do passo 7:** esperado RESOLVIDO | t | 2; obtido RESOLVIDO | t | 2 → **PASSOU**
 
+---
+
+## Revalidação 15/11/2026 — fila ordenada, resolução com usuário e horário, 409 no repetido
+
+- **Ambiente:** PostgreSQL 17 em Docker (`schema.sql` + `seed.sql`), API em `http://localhost:5199`,
+  token de `rafael.nunes@bairrosolidario.example` (VOLUNTARIO, instituição 2).
+
+Fila de abertos, mais grave primeiro (CRITICA antes de MEDIA):
+
+```
+GET /api/alertas?status=ABERTO → 200
+  #7 TEMP_ALTA     CRITICA  ABERTO  equipamento 4
+  #3 PORTA_ABERTA  MEDIA    ABERTO  equipamento 3
+```
+
+Resolução com a ação tomada (corpo opcional `{"acao": "..."}`, valores `AJUSTOU`, `TRANSFERIU_LOTE`, `DESCARTOU`):
+
+```
+PATCH /api/alertas/7/resolver  {"acao":"AJUSTOU"} → 200
+  {"id":7,"status":"RESOLVIDO","resolvidoEm":"2026-11-15T22:26:14+00:00","resolvidoPorId":3,"acaoTomada":"AJUSTOU"}
+
+PATCH /api/alertas/7/resolver  {"acao":"AJUSTOU"} → 409
+  {"title":"Conflito com os dados atuais","detail":"Alerta 7 ja foi resolvido.","instance":"/api/alertas/7/resolver"}
+```
+
+Quem e quando ficaram gravados no banco (o e-mail é o do token usado):
+
+```
+select a.id, a.tipo, a.severidade, a.status, a.resolvido_em, u.nome as resolvido_por, a.acao_tomada
+from alerta a left join usuario u on u.id = a.resolvido_por_id order by a.id desc limit 3;
+
+ id |   tipo    | severidade |  status   |         resolvido_em          | resolvido_por | acao_tomada
+----+-----------+------------+-----------+-------------------------------+---------------+-------------
+  7 | TEMP_ALTA | CRITICA    | RESOLVIDO | 2026-11-15 22:26:14+00        | Rafael Nunes  | AJUSTOU
+  6 | TEMP_ALTA | CRITICA    | RESOLVIDO | 2026-11-15 22:25:03+00        | Rafael Nunes  |
+  5 | TEMP_ALTA | CRITICA    | RESOLVIDO | 2026-11-15 22:22:24.945895+00 | Pedro Lima    |
+```
+
+**Veredito da revalidação:** **PASSOU** — fila ordenada por severidade, `resolvido_por` e `resolvido_em`
+preenchidos, `acao_tomada` persistida e 409 ao resolver de novo.
+

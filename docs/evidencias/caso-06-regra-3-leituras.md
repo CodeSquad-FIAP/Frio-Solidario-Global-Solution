@@ -230,3 +230,29 @@ TEMP_ALTA | ALTA | ABERTO
 
 **Resultado do passo 6:** esperado 1 linha: TEMP_ALTA | ALTA | ABERTO; obtido TEMP_ALTA | ALTA | ABERTO → **PASSOU**
 
+---
+
+## Revalidação 15/11/2026 — regra conferida de ponta a ponta (sem tocar no código)
+
+- **Ambiente:** PostgreSQL 17 em Docker (`schema.sql` + `seed.sql`, 30 leituras / 5 alertas / 6 equipamentos),
+  API em `http://localhost:5199`, equipamento 4 (Freezer de congelados, faixa −25 a −18 °C).
+- **Critério do card:** "3 leituras de 7,8 °C abrem 1 alerta crítico (e não 3)".
+
+```
+POST /api/leituras  7.8 °C  → 201
+POST /api/leituras  7.8 °C  → 201
+POST /api/leituras  7.8 °C  → 201        (3ª leitura fecha a sequência)
+
+GET /api/alertas?status=ABERTO → 200, 2 itens:
+  #6 TEMP_ALTA      CRITICA  ABERTO  equipamento 4   ← aberto pela 3ª leitura
+  #3 PORTA_ABERTA   MEDIA    ABERTO  equipamento 3   ← evento de porta, contado por tempo
+
+alertas TEMP_ALTA do equipamento 4 = 1   (esperado 1; não 3)
+```
+
+A segunda rodada (3 leituras de 7,9 °C, depois de resolver o #6) abriu **um** alerta novo, `#7 TEMP_ALTA CRITICA`,
+confirmando que a sequência é reavaliada sem duplicar histórico.
+
+**Veredito da revalidação:** **PASSOU** — 3 leituras seguidas fora da faixa = 1 alerta; porta aberta continua
+sendo evento separado.
+

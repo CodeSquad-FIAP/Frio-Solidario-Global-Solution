@@ -57,7 +57,7 @@ dotnet test --filter Caso=5   # menos de 3 leituras fora da faixa não abrem ale
 dotnet test --filter Caso=6   # 3 leituras seguidas abrem 1 alerta, sem duplicar
 ```
 
-São **66 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
+São **68 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
 severidade por desvio), o fluxo do `POST /api/leituras` com repositórios em memória
 (`LeituraServiceTests`: um alerta aberto por tipo, sem duplicar) e a API por HTTP (`ApiTests`: 401 sem
 token, casos 5 e 6, a rota `/instituicoes/{id}/equipamentos` e o DELETE lógico do equipamento). Os
@@ -462,7 +462,7 @@ capturas e o roteiro executado estão em `docs/evidencias/app-mobile.md`.
 | Segurança (JWT, validação, anti-SQLi, anti-XSS) | pronto — todas as rotas com token, isolamento por instituição, limite no login, cabeçalhos de segurança; ver seção "Segurança" |
 | Leituras (ingestão + série) | pronto — `POST /api/leituras` (201), `GET /api/equipamentos/{id}/leituras?periodo=24h\|7d` e `GET .../leituras/ultima` (painel do app) |
 | Regra de faixa → alerta | pronto — 3 leituras seguidas fora da faixa, porta aberta por tempo, severidade por desvio; `GET /api/alertas` e `PATCH /api/alertas/{id}/resolver` |
-| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **66 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
+| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **68 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
 | Lotes doados | pronto — `/api/lotes` (lista, busca, cadastro e retirada), sempre na instituição do token; alimenta os indicadores de kg doados e perda |
 | App mobile | pronto — 5 telas + relatório em PDF integrados à API, em `mobile/`; 119 testes unitários; ver "App mobile (Kevin)" e `docs/evidencias/app-mobile.md` |
@@ -480,7 +480,7 @@ com revisão humana do resultado. Preencha a sua linha — a tabela vai para o P
 | Arthur | 97781 | a preencher | a preencher |
 | Kevin | 557898 | Claude Code (Claude) | geração do código e dos testes do app mobile, da ação tomada no alerta (API, schema e teste) e da documentação do app; execução do roteiro de evidências |
 | Roger | 97540 | a preencher | a preencher |
-| Yasmin | 557413 | a preencher (sugestão: Hermes Agent + Claude Code) | geração e revisão de código da API, testes de integração e revisão do README |
+| Yasmin | 557413 | Hermes Agent (Nous Research, modelo DeepSeek) e Codex CLI | geração e revisão do código de API e dos testes, execução real do stack (Postgres + MQTT + API + app), captura de evidências e revisão do README
 
 O que vale declarar, sem medo: código gerado com IA e revisado por humano, texto revisado, pesquisa de
 referência (Atlas, ANVISA, Lei 15.224/2025) e explicação de erro. Nenhuma senha, token ou credencial de
@@ -540,14 +540,19 @@ psql -U postgres -d frio_solidario -v ON_ERROR_STOP=1 -f db/seed.sql
 ```
 
 Sem PostgreSQL instalado na máquina, o mesmo banco sobe em container (foi assim que a integração foi
-testada):
+testada). O `docker cp` funciona igual no Windows, no macOS e no Linux — um bind mount com `$PWD` falha no
+Git Bash do Windows, porque o caminho sai no formato `/d/pasta` e o Docker o interpreta como caminho relativo:
 
 ```bash
 docker run -d --name frio-pg -p 5432:5432 -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=frio_solidario -v "$PWD/db:/sql:ro" postgres:17
+  -e POSTGRES_DB=frio_solidario postgres:17
+docker cp db frio-pg:/sql
 docker exec frio-pg psql -U postgres -d frio_solidario -v ON_ERROR_STOP=1 -f /sql/schema.sql
 docker exec frio-pg psql -U postgres -d frio_solidario -v ON_ERROR_STOP=1 -f /sql/seed.sql
 ```
+
+Conferência rápida: `docker exec frio-pg psql -U postgres -d frio_solidario -tAc "select count(*) from equipamento"`
+deve responder `6`. Se o container já existir de uma tentativa anterior, comece com `docker rm -f frio-pg`.
 
 A API lê esse banco pela connection string `ConnectionStrings:FrioSolidario` do
 `src/FrioSolidario.Api/appsettings.json` (por padrão `localhost:5432/frio_solidario`). Para apontar

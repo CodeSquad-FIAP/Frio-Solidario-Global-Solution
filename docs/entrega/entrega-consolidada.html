@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Frio Solidário — entrega consolidada</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1b1b1b; margin: 0; }
+  h1 { font-size: 26pt; margin: 0 0 4px; color: #0d3b66; letter-spacing: -0.5px; }
+  h2 { font-size: 14pt; margin: 26px 0 8px; color: #0d3b66; border-bottom: 2px solid #0d3b66; padding-bottom: 3px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 16px 0 5px; color: #14406b; page-break-after: avoid; }
+  p { margin: 0 0 8px; text-align: justify; }
+  ul, ol { margin: 0 0 9px 18px; padding: 0; }
+  li { margin-bottom: 3px; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 12px; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #b9c6d4; padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { background: #e8eef5; font-weight: 600; }
+  code, pre { font-family: Consolas, "Courier New", monospace; font-size: 8.6pt; }
+  pre { background: #f4f6f8; border-left: 3px solid #0d3b66; padding: 7px 9px; margin: 8px 0 12px; white-space: pre-wrap; page-break-inside: avoid; }
+  .tag { display: inline-block; background: #0d3b66; color: #fff; font-size: 8pt; padding: 1px 7px; border-radius: 9px; vertical-align: middle; }
+  .ok { color: #1a7f37; font-weight: 600; }
+  .lead { font-size: 11.5pt; color: #333; }
+  .capa { text-align: center; padding-top: 42mm; page-break-after: always; }
+  .capa .sub { font-size: 13pt; color: #33475b; margin: 10px 0 30px; }
+  .capa table { width: 78%; margin: 0 auto; }
+  .meta { text-align: center; color: #5a6b7c; font-size: 9.5pt; margin-top: 26px; }
+  figure { margin: 10px 0 14px; page-break-inside: avoid; }
+  figure img { width: 100%; border: 1px solid #ccd6e0; border-radius: 3px; }
+  figure.half img { width: 68%; display: block; margin: 0 auto; }
+  figcaption { font-size: 8.6pt; color: #4a5b6c; margin-top: 4px; text-align: center; }
+  .two { display: flex; gap: 10px; }
+  .two figure { flex: 1; }
+  .arch { border: 1px solid #b9c6d4; border-radius: 6px; padding: 10px; background: #f8fafc; margin: 8px 0 14px; page-break-inside: avoid; }
+  .row { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 6px 0; }
+  .box { border: 1.5px solid #0d3b66; border-radius: 5px; padding: 6px 9px; background: #fff; font-size: 8.6pt; text-align: center; min-width: 96px; }
+  .box small { display: block; color: #5a6b7c; font-size: 7.6pt; }
+  .arrow { color: #0d3b66; font-weight: 700; font-size: 11pt; }
+  .note { background: #fff8e1; border-left: 3px solid #d09b00; padding: 7px 9px; font-size: 9.2pt; margin: 8px 0 12px; }
+  .src { font-size: 8.4pt; color: #4a5b6c; }
+  .quebra { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<div class="capa">
+  <h1>Frio Solidário</h1>
+  <div class="sub">Monitoramento da cadeia de frio em bancos de alimentos<br>e comércios doadores</div>
+  <p class="lead" style="text-align:center">Global Solution 2026/2 — FIAP, turma 3ESOA<br>Entrega consolidada · 15 de novembro de 2026</p>
+  <table>
+    <tr><th>Integrante</th><th>RM</th><th>Frente</th></tr>
+    <tr><td>André Luiz</td><td>554952</td><td>Banco de dados e modelagem</td></tr>
+    <tr><td>Arthur Corrêa</td><td>97781</td><td>Dashboard e testes automatizados</td></tr>
+    <tr><td>Kevin Benevides</td><td>557898</td><td>App mobile (Kotlin + Compose)</td></tr>
+    <tr><td>Roger Viana</td><td>97540</td><td>Hardware, IoT e simulação</td></tr>
+    <tr><td>Yasmin Kimura</td><td>557413</td><td>API, testes de integração e documentação</td></tr>
+  </table>
+  <p class="meta">Repositório: github.com/CodeSquad-FIAP/Frio-Solidario-Global-Solution<br>
+  Stack: .NET 10 · PostgreSQL 17 · MQTT (Mosquitto) · Kotlin/Jetpack Compose · Docker</p>
+</div>
+
+<h2>1. O problema, com número e fonte</h2>
+
+<p>Um banco de alimentos trabalha com o que é perecível por definição: o alimento doado já está no fim da
+vida útil e depende de uma cadeia de frio que ninguém está olhando às 3 da manhã. Quando a câmara falha, o
+lote não estraga na hora — ele estraga <em>antes de alguém perceber</em>, e a descoberta acontece na manhã
+seguinte, com o freezer a 7 °C e o lote pronto para o descarte.</p>
+
+<table>
+  <tr><th>Dado</th><th>Número</th><th>Fonte</th></tr>
+  <tr><td>Alimento perdido ou desperdiçado no planeta por ano</td><td>≈ 1,3 bilhão de toneladas (≈ 30% do produzido)</td><td>FAO, apud MAPA — Relatório Final de Perdas e Desperdício de Alimentos</td></tr>
+  <tr><td>Perda no varejo e no consumo (2019)</td><td>931 milhões de t (17% do disponível ao consumidor)</td><td>PNUMA, apud mesmo relatório do MAPA</td></tr>
+  <tr><td>Desperdício das famílias brasileiras</td><td>128,8 kg por família/ano (41,6 kg per capita)</td><td>MAPA — levantamento nacional</td></tr>
+  <tr><td>Prejuízo anual do Brasil com alimento que vai ao lixo</td><td>R$ 61,3 bilhões</td><td>Valor Econômico, 15/10/2024</td></tr>
+  <tr><td>Desperdício anual no Brasil</td><td>≈ 55,4 milhões de t (≈ 30% da produção)</td><td>Pacto Contra a Fome (levantamento divulgado pela CNN Brasil)</td></tr>
+</table>
+
+<p>O marco legal mudou em 2025: a <strong>Lei 15.224, de 30 de setembro de 2025</strong>, instituiu a
+Política Nacional de Combate à Perda e ao Desperdício de Alimentos (PNCPDA), criou o Selo Doador de
+Alimentos e fixou como objetivo “mitigar o desperdício de alimentos, de forma a contribuir para a redução
+da insegurança alimentar” (art. 5º, II), com fortalecimento dos bancos de alimentos entre os princípios
+(art. 4º, VII). A doação deixou de ser gesto isolado e passou a ser política pública — e política pública
+com meta precisa de registro. É exatamente o que falta na ponta: quem doou 200 kg de iogurte precisa provar
+que a câmara ficou dentro da faixa, e quem recebeu precisa saber que o alimento foi conservado.</p>
+
+<p>Do lado sanitário, a <strong>RDC 216/2004 (ANVISA)</strong> exige controle de temperatura na conservação
+de alimentos preparados. Um sistema que só registra a temperatura no papel não cumpre o controle: ele
+documenta a intenção, não o fato.</p>
+
+<div class="note"><strong>A tese do projeto:</strong> o alimento não se perde por falta de doação — perde-se
+porque a falha de frio é descoberta tarde. Se o alerta chega em segundos, o lote é salvo; se chega na manhã
+seguinte, é lixo. Todo o sistema existe para encurtar esse intervalo.</div>
+
+<h2>2. O que o sistema faz</h2>
+
+<p>Sensores medem temperatura, umidade e abertura de porta; a API compara cada leitura com a faixa
+configurada para o equipamento; quando a leitura fica fora da faixa <em>três vezes seguidas</em>, nasce um
+alerta com severidade, que aparece na fila do voluntário no app e pode ser resolvido no local, registrando
+quem resolveu, quando e o que foi feito.</p>
+
+<table>
+  <tr><th>Camada</th><th>Tecnologia</th><th>O que faz</th></tr>
+  <tr><td>Dispositivo</td><td>DHT22 + reed switch, simulado por <code>simulacao/sensor.py</code></td><td>Publica leitura a cada 2 s em <code>frio/equipamentos/{id}/leitura</code></td></tr>
+  <tr><td>Transporte</td><td>MQTT (Eclipse Mosquitto 2)</td><td>Desacopla o sensor da API; broker aceita N dispositivos</td></tr>
+  <tr><td>API</td><td>.NET 10 (ASP.NET Core), 4 camadas</td><td>Regra de alerta, CRUD, autenticação JWT, relatório em PDF</td></tr>
+  <tr><td>Banco</td><td>PostgreSQL 17</td><td>Histórico, integridade por constraint, consultas de indicadores</td></tr>
+  <tr><td>App</td><td>Kotlin + Jetpack Compose (Android)</td><td>Painel, fila de alertas, detalhe com gráfico, lotes, relatório</td></tr>
+</table>
+
+<h3>Arquitetura</h3>
+
+<div class="arch">
+  <div class="row">
+    <div class="box">Sensor / simulador<small>sensor.py · DHT22</small></div>
+    <div class="arrow">→</div>
+    <div class="box">Broker MQTT<small>Mosquitto :1883</small></div>
+    <div class="arrow">→</div>
+    <div class="box">Ponte MQTT<small>Infrastructure</small></div>
+    <div class="arrow">→</div>
+    <div class="box">Application<small>RegraDeAlerta</small></div>
+    <div class="arrow">→</div>
+    <div class="box">PostgreSQL<small>6 tabelas</small></div>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <div class="box">App Android<small>Compose · Retrofit</small></div>
+    <div class="arrow">⇄</div>
+    <div class="box">API REST<small>Controllers + JWT</small></div>
+    <div class="arrow">→</div>
+    <div class="box">Repositórios<small>EF Core (Dapper-free)</small></div>
+    <div class="arrow">→</div>
+    <div class="box">PostgreSQL<small>schema.sql como fonte</small></div>
+  </div>
+  <p class="src" style="text-align:center;margin:8px 0 0">Fluxo sempre Controller → Service → Repository: o controller não conhece banco,
+  o serviço não conhece HTTP, o repositório não devolve DTO de tela.</p>
+</div>
+
+<p>O app <strong>não</strong> fala MQTT: quem assina o broker é a API. Isso é decisão de projeto, não
+limitação — se o celular assinasse o broker, a senha do broker iria dentro do APK e as regras de alerta e o
+histórico seriam duplicados em cada aparelho.</p>
+
+<h2>3. Modelo de dados</h2>
+
+<figure>
+  <img src="../der.png" alt="Diagrama entidade-relacionamento">
+  <figcaption>Diagrama ER — seis entidades, cardinalidades e chaves (fonte: <code>docs/der.md</code>).</figcaption>
+</figure>
+
+<table>
+  <tr><th>Tabela</th><th>Colunas principais</th><th>Regra que o banco garante</th></tr>
+  <tr><td><code>instituicao</code></td><td>nome, cnpj (14 dígitos), tipo, cidade, endereco</td><td>CNPJ único</td></tr>
+  <tr><td><code>usuario</code></td><td>nome, email, senha_hash (BCrypt), papel, instituicao_id</td><td>E-mail único; papel ADMIN ou VOLUNTARIO</td></tr>
+  <tr><td><code>equipamento</code></td><td>nome, tipo, temp_min, temp_max, umid_max, ativo</td><td><code>temp_min &lt; temp_max</code>; umidade entre 0 e 100</td></tr>
+  <tr><td><code>leitura</code></td><td>temperatura, umidade, porta_aberta, registrada_em, origem</td><td>Temperatura de −40 a 80 °C; origem SENSOR ou SIMULADO</td></tr>
+  <tr><td><code>alerta</code></td><td>tipo, severidade, status, criado_em, resolvido_em, resolvido_por_id, acao_tomada</td><td>Resolvido exige data e responsável, e <code>resolvido_em ≥ criado_em</code></td></tr>
+  <tr><td><code>lote</code></td><td>descricao, categoria, kg, validade, status, retirado_em</td><td>DISTRIBUIDO/PERDIDO exige <code>retirado_em</code>; DISPONIVEL não tem</td></tr>
+</table>
+
+<p>Os enums são <code>CHECK</code> no banco e texto na API (<code>CAMARA</code>, <code>TEMP_ALTA</code>,
+<code>ABERTO</code>) — número no lugar do texto volta 400, porque o vocabulário é o contrato. O
+<code>schema.sql</code> é a fonte da verdade: o EF Core mapeia, não cria nem altera tabela.</p>
+
+<h3>Integridade que já barrou erro de verdade</h3>
+<ul>
+  <li><code>ck_alerta_resolucao_coerente</code>: um alerta não pode ser resolvido antes de ser criado. Apareceu
+  em teste com leitura de relógio adiantado — o serviço ajusta a data em vez de deixar o <code>UPDATE</code> falhar.</li>
+  <li><code>ck_lote_retirada_coerente</code>: lote distribuído sem data sairia da conta de kg doados sem aviso.</li>
+  <li><code>DELETE</code> de instituição com equipamentos/usuários/lotes volta 409 em vez de apagar em cascata.</li>
+</ul>
+
+<h2>4. API e segurança</h2>
+
+<p>São 24 rotas em <code>/api</code>, todas fechadas por padrão: só <code>/api/auth/login</code>,
+<code>/api/health</code> e o Swagger são públicos. Escritas de instituição e equipamento exigem papel
+<code>ADMIN</code>; toda leitura é escopada pela instituição do token.</p>
+
+<table>
+  <tr><th>Método</th><th>Rota</th><th>O que faz</th></tr>
+  <tr><td>POST</td><td><code>/api/auth/login</code></td><td>autentica e devolve o JWT (10 tentativas/min por IP)</td></tr>
+  <tr><td>GET</td><td><code>/api/health</code></td><td>status + quantos equipamentos existem no banco (pública)</td></tr>
+  <tr><td>GET</td><td><code>/api/equipamentos</code></td><td>equipamentos da instituição do token (<code>?ativo=</code>)</td></tr>
+  <tr><td>POST</td><td><code>/api/leituras</code></td><td>registra leitura e devolve os alertas que ela abriu</td></tr>
+  <tr><td>GET</td><td><code>/api/equipamentos/{id}/leituras?periodo=24h</code></td><td>série do gráfico (24h ou 7d)</td></tr>
+  <tr><td>GET</td><td><code>/api/alertas?status=ABERTO</code></td><td>fila da instituição, mais grave primeiro</td></tr>
+  <tr><td>PATCH</td><td><code>/api/alertas/{id}/resolver</code></td><td>resolve com o usuário do token; <code>{"acao":"AJUSTOU"}</code> grava a ação</td></tr>
+  <tr><td>GET</td><td><code>/api/lotes?status=</code></td><td>lotes doados, o que vence primeiro</td></tr>
+  <tr><td>GET</td><td><code>/api/equipamentos/{id}/relatorio?de=&amp;ate=</code></td><td>log térmico em PDF (7 dias por padrão)</td></tr>
+</table>
+<p class="src">Tabela completa (24 rotas) no README, seção “Endpoints”.</p>
+
+<h3>O que foi testado contra ataque</h3>
+<table>
+  <tr><th>Ataque</th><th>Defesa</th><th>Resultado real</th></tr>
+  <tr><td>SQL injection no e-mail do login</td><td>consulta parametrizada (EF Core)</td><td class="ok">400 — texto tratado como dado</td></tr>
+  <tr><td>SQL injection na senha</td><td>BCrypt compara hash, não concatena SQL</td><td class="ok">401</td></tr>
+  <tr><td>XSS no nome da instituição</td><td>validação de entrada + saída JSON</td><td class="ok">400, nada gravado</td></tr>
+  <tr><td>Token de outra instituição</td><td>escopo por <code>instituicao_id</code> do token</td><td class="ok">403</td></tr>
+  <tr><td>Força bruta no login</td><td>rate limit 10/min por IP</td><td class="ok">429</td></tr>
+  <tr><td>Token expirado / ausente</td><td>validação de assinatura e validade</td><td class="ok">401</td></tr>
+</table>
+
+<div class="two">
+  <figure><img src="../evidencias/prints/caso-07-b-sql-injection-email-400.png"><figcaption>SQL injection no e-mail: 400.</figcaption></figure>
+  <figure><img src="../evidencias/prints/caso-07-f-limite-de-login-429.png"><figcaption>Força bruta: 429 após 10 tentativas.</figcaption></figure>
+</div>
+
+<h2>5. A regra do alerta (o coração do projeto)</h2>
+
+<p>A regra vive em uma classe pura, sem banco e sem HTTP, o que permite testá-la exaustivamente:
+<code>src/FrioSolidario.Application/Services/RegraDeAlerta.cs</code>.</p>
+
+<ul>
+  <li><strong>Temperatura:</strong> três leituras <em>consecutivas</em> fora da faixa abrem <strong>um</strong>
+  alerta (<code>TEMP_ALTA</code> ou <code>TEMP_BAIXA</code>) — não três. Severidade por tamanho do desvio.</li>
+  <li><strong>Porta:</strong> é evento separado, contado por tempo aberto (<code>PORTA_ABERTA</code>), porque
+  porta aberta por 40 s ao receber doação não é falha, e aberta por 10 min é perda de frio.</li>
+  <li><strong>Umidade:</strong> <code>UMIDADE</code> acima do limite do equipamento.</li>
+  <li><strong>Idempotência:</strong> enquanto existe alerta aberto daquele tipo para aquele equipamento, novas
+  leituras não criam outro.</li>
+</ul>
+
+<pre>POST /api/leituras  7.8 °C → 201
+POST /api/leituras  7.8 °C → 201
+POST /api/leituras  7.8 °C → 201      ← terceira leitura fecha a sequência
+
+GET /api/alertas?status=ABERTO → 200
+  #6  TEMP_ALTA     CRITICA  ABERTO  equipamento 4   ← aberto pela terceira leitura
+  #3  PORTA_ABERTA  MEDIA    ABERTO  equipamento 3   ← evento de porta, contado por tempo
+
+alertas TEMP_ALTA do equipamento 4 = 1   (esperado 1, não 3)</pre>
+
+<figure>
+  <img src="../evidencias/prints/caso-06-a-terceira-leitura-abre-alerta-201.png">
+  <figcaption>Caso 6: a terceira leitura de 7,8 °C é a que devolve o alerta na resposta (HTTP 201).</figcaption>
+</figure>
+
+<p>Resolução no local, com rastro de quem resolveu:</p>
+<pre>PATCH /api/alertas/7/resolver  {"acao":"AJUSTOU"} → 200
+  {"id":7,"status":"RESOLVIDO","resolvidoEm":"2026-11-15T22:26:14+00:00","resolvidoPorId":3,"acaoTomada":"AJUSTOU"}
+
+PATCH /api/alertas/7/resolver  {"acao":"AJUSTOU"} → 409
+  "Alerta 7 ja foi resolvido."
+
+select a.id, a.tipo, a.status, a.resolvido_em, u.nome, a.acao_tomada
+from alerta a left join usuario u on u.id = a.resolvido_por_id order by a.id desc limit 1;
+
+ id |   tipo    |  status   |         resolvido_em   | resolvido_por | acao_tomada
+----+-----------+-----------+------------------------+---------------+-------------
+  7 | TEMP_ALTA | RESOLVIDO | 2026-11-15 22:26:14+00 | Rafael Nunes  | AJUSTOU</pre>
+
+<div class="two">
+  <figure><img src="../evidencias/prints/caso-08-a-fila-de-alertas-200.png"><figcaption>Fila de alertas abertos, mais grave primeiro.</figcaption></figure>
+  <figure><img src="../evidencias/prints/caso-08-c-resolver-de-novo-409.png"><figcaption>Segunda resolução do mesmo alerta: 409.</figcaption></figure>
+</div>
+
+<h2>6. IoT: do sensor ao banco</h2>
+
+<p>A ponte MQTT roda dentro da API (<code>Infrastructure/Mqtt</code>) e assina
+<code>frio/equipamentos/+/leitura</code>. O simulador <code>simulacao/sensor.py</code> reproduz o hardware
+com cinco cenários (pico curto, quebra de compressor, porta aberta 40 s, porta aberta, normal) e publica o
+mesmo JSON que o dispositivo real publicaria.</p>
+
+<pre>sensor: [mqtt] -> frio/equipamentos/4/leitura
+        {"equipamentoId":4,"temperatura":7.8,"umidade":75.0,"portaAberta":false,"origem":"SIMULADO"}
+MQTT: equipamento 4 7.8C / 75.0% porta fechada -> leitura 37, 1 alerta(s) aberto(s)</pre>
+
+<p>A origem do dado é lida do próprio payload (<code>SENSOR</code> ou <code>SIMULADO</code>): assim o dado
+que veio do simulador fica marcado como simulado no banco, sem que o app precise saber a diferença — e sem
+alterar uma linha de interface.</p>
+
+<p>O contrato do payload tem teste próprio (<code>simulacao/teste_contrato.py</code>) e a desserialização tem
+teste xUnit, inclusive para origem inválida (payload com origem desconhecida é recusado, não vira
+<code>SENSOR</code> por omissão).</p>
+
+<h2>7. App Android</h2>
+
+<p>Aplicativo Kotlin + Jetpack Compose, cinco telas integradas à API real (sem dado mockado no código de
+produção — <code>grep</code> por mock/fake/hardcoded em <code>app/src/main</code> não retorna nada; os mocks
+existem só nos testes, com MockWebServer). Login por JWT, painel com todas as câmaras, fila de alertas,
+detalhe com gráfico de 24 h e relatório térmico em PDF.</p>
+
+<div class="two">
+  <figure><img src="../evidencias/prints/app-painel-critico.png"><figcaption>Painel: freezer a 6,0 °C, fora da faixa de −25 a −18 °C.</figcaption></figure>
+  <figure><img src="../evidencias/prints/app-alertas-temp-alta.png"><figcaption>Fila: alerta crítico aberto há segundos.</figcaption></figure>
+</div>
+
+<figure class="half">
+  <img src="../evidencias/prints/app-detalhe-freezer.png">
+  <figcaption>Detalhe do equipamento: leitura atual, faixa e série das últimas 24 h.</figcaption>
+</figure>
+
+<p>O vídeo <code>docs/evidencias/video-projeto-completo-15-11-2026.mp4</code> mostra a cadeia inteira na
+mesma gravação: app à esquerda, sensor e log da API à direita, alerta nascendo durante a execução.</p>
+
+<h2 class="quebra">8. Testes: plano, execução e resultado</h2>
+
+<p>O plano tem nove casos em <code>docs/plano-de-testes.md</code>; cada um foi executado contra a API real e
+o resultado está em <code>docs/evidencias/caso-0X-*.md</code>, com requisição, resposta e consulta ao banco.</p>
+
+<table>
+  <tr><th>#</th><th>Caso</th><th>O que verifica</th><th>Veredito</th></tr>
+  <tr><td>1</td><td>Login</td><td>senha em BCrypt, 200 com token, 401 com senha errada</td><td class="ok">passou</td></tr>
+  <tr><td>2</td><td>Perfis</td><td>401 sem token, 403 com VOLUNTARIO em rota ADMIN</td><td class="ok">passou</td></tr>
+  <tr><td>3</td><td>Cadastro de equipamento</td><td>201 para ADMIN, 400 com faixa invertida</td><td class="ok">passou</td></tr>
+  <tr><td>4</td><td>Manutenção</td><td>série de 24 h, 409 ao remover equipamento com leituras</td><td class="ok">passou</td></tr>
+  <tr><td>5</td><td>Regra com menos de 3 leituras</td><td>duas leituras fora da faixa não abrem alerta</td><td class="ok">passou</td></tr>
+  <tr><td>6</td><td>Regra com 3 leituras</td><td>terceira abre 1 alerta; quarta não duplica</td><td class="ok">passou</td></tr>
+  <tr><td>7</td><td>Segurança</td><td>SQLi, XSS, 403 de outra instituição, 429, token expirado</td><td class="ok">passou (7/7)</td></tr>
+  <tr><td>8</td><td>Fila e resolução</td><td>fila ordenada, resolução com usuário e horário, 409 no repetido</td><td class="ok">passou (7/7)</td></tr>
+  <tr><td>9</td><td>Schema do zero</td><td><code>schema.sql</code> + <code>seed.sql</code> em banco vazio</td><td class="ok">passou</td></tr>
+</table>
+
+<p>Além do plano manual, <strong>68 testes xUnit</strong> rodam sem banco: a regra pura (limites de faixa,
+sequência, alternância, porta, umidade, severidade), o serviço com repositórios em memória e a API de
+verdade via <code>WebApplicationFactory</code> (TestServer), cobrindo status code, corpo e headers.</p>
+
+<pre>dotnet test
+Aprovado!  – Com falha: 0, Aprovado: 68, Ignorado: 0, Total: 68</pre>
+
+<h3>Validação em pasta limpa</h3>
+<p>O README foi seguido ao pé da letra numa cópia limpa do repositório (sem <code>bin/</code>, sem banco, sem
+configuração prévia): <code>docker run</code> do Postgres, <code>docker cp db</code>, <code>schema.sql</code>,
+<code>seed.sql</code>, <code>dotnet restore</code>, <code>dotnet run</code>. Resultado:</p>
+<pre>curl http://localhost:5199/api/health
+{"servico":"Frio Solidario API","status":"ok","versao":"1.0.0","ambiente":"Development",
+ "verificadoEm":"2026-11-15T19:28:01-03:00","origemDosDados":"6 equipamentos no banco"}</pre>
+<p>O campo <code>origemDosDados</code> é <code>SELECT COUNT(*)</code> no banco de verdade: se o Postgres
+estiver fora, a API responde “banco indisponivel” em vez de quebrar.</p>
+
+<h2>9. Quem fez o quê</h2>
+<table>
+  <tr><th>Integrante</th><th>RM</th><th>Entrega</th><th>Artefatos</th></tr>
+  <tr><td>André Luiz</td><td>554952</td><td>Modelagem e banco</td><td><code>db/schema.sql</code>, <code>db/seed.sql</code>, <code>db/consultas.sql</code>, <code>docs/der.md</code></td></tr>
+  <tr><td>Arthur Corrêa</td><td>97781</td><td>Plano de testes e suíte automatizada</td><td><code>tests/FrioSolidario.Tests</code>, <code>docs/plano-de-testes.md</code></td></tr>
+  <tr><td>Kevin Benevides</td><td>557898</td><td>App mobile</td><td><code>mobile/</code>, <code>docs/evidencias/app-mobile.md</code></td></tr>
+  <tr><td>Roger Viana</td><td>97540</td><td>Hardware, MQTT e simulação</td><td><code>simulacao/sensor.py</code>, <code>simulacao/teste_contrato.py</code>, ponte MQTT</td></tr>
+  <tr><td>Yasmin Kimura</td><td>557413</td><td>API, integração ponta a ponta e documentação</td><td><code>src/</code>, casos 1–9 de evidência, README, vídeo da cadeia completa</td></tr>
+</table>
+
+<h2>10. Impacto social e ODS</h2>
+
+<p><strong>ODS 2 — Fome zero e agricultura sustentável.</strong> O sistema atua no elo em que o alimento já
+foi doado mas ainda pode ser perdido. Cada lote salvo é alimento que chega ao prato em vez do lixo: com um
+alerta em segundos, o voluntário fecha a porta, transfere o lote para outra câmara ou prioriza a distribuição
+— as três ações que o próprio sistema registra (<code>AJUSTOU</code>, <code>TRANSFERIU_LOTE</code>,
+<code>DESCARTOU</code>). Isso se conecta direto à meta 2.1 (acabar com a fome) e à 2.4 (práticas
+sustentáveis de produção e cadeia).</p>
+
+<p><strong>ODS 10 — Redução das desigualdades.</strong> Banco de alimentos é infraestrutura de redistribuição:
+o que sobra num comércio abastado chega a quem tem menos. A perda no meio do caminho é perda de acesso. Ao
+dar rastreabilidade ao lote doado (quantos kg, de onde, com que histórico térmico), o sistema permite que a
+instituição prove qualidade e amplie a rede de doadores — que é o que a Lei 15.224/2025 passou a incentivar
+com o Selo Doador.</p>
+
+<p><strong>Cenário ilustrativo (não é medição do projeto):</strong> uma câmara com 200 kg de iogurte doado,
+após uma falha de compressor às 3 h. Sem monitoramento, o lote é encontrado na manhã seguinte e descartado.
+Com o sistema, três leituras fora da faixa em 4 s geram um alerta crítico, o plantonista recebe no celular e
+age em minutos. O projeto não mede quantos kg foram salvos em campo — mede o que controla: o tempo entre a
+falha e o alerta.</p>
+
+<h2>11. O que ainda não roda (declarado)</h2>
+<table>
+  <tr><th>Item</th><th>Situação</th></tr>
+  <tr><td>Sensor físico (DHT22 / reed switch)</td><td>simulado por <code>simulacao/sensor.py</code>; o payload e o broker são reais</td></tr>
+  <tr><td>Autenticação do broker MQTT</td><td>anônima no ambiente de demo; em produção exige usuário/senha por dispositivo</td></tr>
+  <tr><td>App em aparelho físico</td><td>testado em emulador Android; em aparelho real basta <code>adb reverse tcp:5199 tcp:5199</code></td></tr>
+  <tr><td>HTTPS e deploy público</td><td>fora do escopo desta entrega; API roda em <code>localhost:5199</code></td></tr>
+</table>
+
+<h2>12. Uso de IA</h2>
+
+<p>Regra combinada no grupo: cada integrante declara as ferramentas que usou e para quê, com revisão humana
+do resultado. Nenhuma senha, token ou credencial de instituição real foi usada; os dados são fictícios.</p>
+
+<table>
+  <tr><th>Integrante</th><th>Ferramenta</th><th>Para quê</th></tr>
+  <tr><td>André</td><td><em>declaração pendente</em></td><td>—</td></tr>
+  <tr><td>Arthur</td><td><em>declaração pendente</em></td><td>—</td></tr>
+  <tr><td>Kevin</td><td>Claude Code (Claude)</td><td>código e testes do app, ação tomada no alerta (API, schema e teste), documentação do app, execução do roteiro de evidências</td></tr>
+  <tr><td>Roger</td><td><em>declaração pendente</em></td><td>—</td></tr>
+  <tr><td>Yasmin</td><td>Hermes Agent (Nous Research) e Codex CLI</td><td>código de API e testes, execução real do stack (Postgres + MQTT + API + app), captura de evidências, revisão do README</td></tr>
+</table>
+
+<h2>13. Como rodar</h2>
+<pre># 1. banco
+docker run -d --name frio-pg -p 5432:5432 -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=frio_solidario postgres:17
+docker cp db frio-pg:/sql
+docker exec frio-pg psql -U postgres -d frio_solidario -v ON_ERROR_STOP=1 -f /sql/schema.sql
+docker exec frio-pg psql -U postgres -d frio_solidario -v ON_ERROR_STOP=1 -f /sql/seed.sql
+
+# 2. API  → http://localhost:5199/swagger
+dotnet restore
+dotnet run --project src/FrioSolidario.Api
+
+# 3. broker + sensor simulado
+docker run -d --name frio-mqtt -p 1883:1883 eclipse-mosquitto:2 mosquitto -c /mosquitto-no-auth.conf
+python simulacao/sensor.py --cenario quebra-compressor --rapido
+
+# 4. testes
+dotnet test</pre>
+<p>App: abrir <code>mobile/</code> no Android Studio e rodar no emulador (a API é alcançada em
+<code>10.0.2.2:5199</code>). Login de demonstração: <code>rafael.nunes@bairrosolidario.example</code>.</p>
+
+<h3>Referências</h3>
+<ul class="src">
+  <li>BRASIL. <strong>Lei nº 15.224, de 30 de setembro de 2025</strong> — Política Nacional de Combate à Perda e ao Desperdício de Alimentos. Planalto.</li>
+  <li>BRASIL. Ministério da Agricultura e Pecuária. <strong>Perdas e Desperdício de Alimentos</strong> — relatório final (FAO/PNUMA).</li>
+  <li>ANVISA. <strong>RDC nº 216/2004</strong> — boas práticas para serviços de alimentação.</li>
+  <li>VALOR ECONÔMICO. <strong>Brasil perde R$ 61,3 bilhões por ano com desperdício de alimentos</strong>, 15/10/2024.</li>
+  <li>Pacto Contra a Fome — levantamento de 55,4 milhões de t/ano (divulgado pela CNN Brasil).</li>
+  <li>ONU. <strong>Objetivos de Desenvolvimento Sustentável</strong> — ODS 2 e ODS 10.</li>
+</ul>
+
+</body>
+</html>

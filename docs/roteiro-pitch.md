@@ -148,7 +148,7 @@ Frio Solidário: comida boa que chega a quem precisa — e nunca vira lixo por u
 - [ ] Definir duração final (alvo: 2 a 3 min) e cortar cenas se preciso.
 - [ ] Gerar cada cena com os prompts de `docs/prompts-renderizacao.md` em estilo consistente.
 - [ ] Gravar a locução (texto único da seção acima) ou gerar com IA.
-- [ ] **Intercalar capturas reais:** `dotnet test` (66 OK), `unittest` (4/4 OK), prints do app com alerta.
+- [ ] **Intercalar capturas reais:** `dotnet test` (68 OK), `unittest` (4/4 OK), prints do app com alerta.
 - [ ] Ajustar ritmo: cortar pausas, sincronizar narração com o visual.
 - [ ] Revisar fidelidade: não mostrar hardware físico como se tivesse sido testado.
 - [ ] Exportar em alta resolução (16:9) com legenda opcional.
