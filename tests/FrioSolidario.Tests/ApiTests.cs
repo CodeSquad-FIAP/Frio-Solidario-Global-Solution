@@ -240,6 +240,63 @@ public class ApiTests
     }
 
 
+    /// <summary>
+    /// O painel do app precisa só da leitura mais recente de cada equipamento: a rota devolve uma
+    /// leitura, mesmo que ela seja mais antiga que a janela de 24h do gráfico.
+    /// </summary>
+    [Fact]
+    public async Task UltimaLeitura_DevolveAMaisRecente_MesmoForaDaJanelaDoGrafico()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente(instituicaoId: 2);
+
+        foreach (var (temperatura, quando) in new[]
+                 {
+                     (-21m, DateTimeOffset.UtcNow.AddDays(-9)),
+                     (-19.5m, DateTimeOffset.UtcNow.AddDays(-3)),
+                 })
+        {
+            var gravada = await cliente.PostAsJsonAsync(
+                "/api/leituras",
+                new LeituraRequest(4, temperatura, 75m, false, quando, OrigemLeitura.SIMULADO),
+                JsonDaApi.Opcoes);
+            Assert.Equal(HttpStatusCode.Created, gravada.StatusCode);
+        }
+
+        var ultima = await cliente.GetFromJsonAsync<LeituraResponse>(
+            "/api/equipamentos/4/leituras/ultima", JsonDaApi.Opcoes);
+
+        Assert.NotNull(ultima);
+        Assert.Equal(-19.5m, ultima!.Temperatura);
+        Assert.Equal(4, ultima.EquipamentoId);
+    }
+
+    /// <summary>Equipamento sem leitura nenhuma responde 204, que o app mostra como "sem leitura".</summary>
+    [Fact]
+    public async Task UltimaLeitura_SemLeitura_Volta204()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente(instituicaoId: 2);
+
+        var resposta = await cliente.GetAsync("/api/equipamentos/4/leituras/ultima");
+
+        Assert.Equal(HttpStatusCode.NoContent, resposta.StatusCode);
+    }
+
+    /// <summary>A rota segue o mesmo isolamento da série: outra instituição é 403, id inexistente é 404.</summary>
+    [Fact]
+    public async Task UltimaLeitura_RespeitaInstituicaoEExistencia()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente(instituicaoId: 2);
+
+        var deOutra = await cliente.GetAsync("/api/equipamentos/1/leituras/ultima");
+        Assert.Equal(HttpStatusCode.Forbidden, deOutra.StatusCode);
+
+        var inexistente = await cliente.GetAsync("/api/equipamentos/9999/leituras/ultima");
+        Assert.Equal(HttpStatusCode.NotFound, inexistente.StatusCode);
+    }
+
     /// <summary>Lote nasce DISPONIVEL na instituicao do token; a retirada o tira do estoque uma vez so.</summary>
     [Fact]
     public async Task Lotes_CadastraDisponivel_RegistraRetiradaENaoRepete()

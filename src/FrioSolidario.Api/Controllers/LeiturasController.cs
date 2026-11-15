@@ -43,4 +43,16 @@ public sealed class LeiturasController(ILeituraService leituras) : ControllerBas
         [FromQuery] string? periodo,
         CancellationToken cancellationToken)
         => Ok(await leituras.ListarAsync(equipamentoId, periodo, User.InstituicaoObrigatoria(), cancellationToken));
+
+    /// <summary>Leitura mais recente do equipamento, para o painel do app (um valor, nao a serie).</summary>
+    /// <response code="204">O equipamento ainda nao enviou nenhuma leitura.</response>
+    [HttpGet("equipamentos/{equipamentoId:long}/leituras/ultima")]
+    [ProducesResponseType(typeof(LeituraResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<LeituraResponse>> Ultima(long equipamentoId, CancellationToken cancellationToken)
+    {
+        var ultima = await leituras.UltimaAsync(equipamentoId, User.InstituicaoObrigatoria(), cancellationToken);
+        return ultima is null ? NoContent() : Ok(ultima);
+    }
 }

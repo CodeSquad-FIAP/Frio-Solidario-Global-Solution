@@ -75,6 +75,20 @@ public sealed class LeituraService(
         return lista.Select(LeituraResponse.De).ToList();
     }
 
+    public async Task<LeituraResponse?> UltimaAsync(
+        long equipamentoId,
+        long? instituicaoDoToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        var encontrado = await equipamentos.ObterAsync(equipamentoId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Equipamento {equipamentoId} nao encontrado.");
+
+        GarantirInstituicaoDoToken(encontrado.Equipamento, instituicaoDoToken);
+
+        var ultimas = await leituras.UltimasAsync(equipamentoId, 1, cancellationToken);
+        return ultimas.Count == 0 ? null : LeituraResponse.De(ultimas[0]);
+    }
+
     /// <summary>Traduz "24h"/"7d" na janela consultada; qualquer outro valor e erro do cliente (400).</summary>
     private static TimeSpan Janela(string? periodo) => (periodo ?? "24h").Trim().ToLowerInvariant() switch
     {
