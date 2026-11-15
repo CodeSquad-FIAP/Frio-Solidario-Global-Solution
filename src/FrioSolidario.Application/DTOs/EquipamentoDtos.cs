@@ -31,7 +31,11 @@ public sealed record EquipamentoRequest(
 
     bool Ativo = true);
 
-/// <summary>Equipamento como o app recebe, ja com o nome da instituicao para a tela de detalhe.</summary>
+/// <summary>
+/// Equipamento como o app recebe, ja com o nome da instituicao para a tela de detalhe. A
+/// <see cref="UltimaLeitura"/> vem preenchida nas listagens: o painel mostra a temperatura, o
+/// horario do dado e a cor de cada equipamento numa unica requisicao.
+/// </summary>
 public sealed record EquipamentoResponse(
     long Id,
     long InstituicaoId,
@@ -41,9 +45,10 @@ public sealed record EquipamentoResponse(
     decimal TempMin,
     decimal TempMax,
     decimal UmidMax,
-    bool Ativo)
+    bool Ativo,
+    LeituraResponse? UltimaLeitura = null)
 {
-    public static EquipamentoResponse De(Equipamento equipamento, string instituicao) => new(
+    public static EquipamentoResponse De(Equipamento equipamento, string instituicao, Leitura? ultimaLeitura = null) => new(
         equipamento.Id,
         equipamento.InstituicaoId,
         instituicao,
@@ -52,5 +57,6 @@ public sealed record EquipamentoResponse(
         equipamento.TempMin,
         equipamento.TempMax,
         equipamento.UmidMax,
-        equipamento.Ativo);
+        equipamento.Ativo,
+        ultimaLeitura is null ? null : LeituraResponse.De(ultimaLeitura));
 }

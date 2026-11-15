@@ -8,24 +8,35 @@ namespace FrioSolidario.Infrastructure.Repositories;
 
 public sealed class EquipamentoRepository(FrioSolidarioDbContext contexto) : IEquipamentoRepository
 {
-    public async Task<IReadOnlyList<(Equipamento Equipamento, string Instituicao)>> ListarAsync(
+    public async Task<IReadOnlyList<(Equipamento Equipamento, string Instituicao, Leitura? UltimaLeitura)>> ListarAsync(
         long? instituicaoId = null,
         bool? ativo = null,
         CancellationToken cancellationToken = default)
     {
+        // A leitura mais recente vem como subconsulta por equipamento: o EF traduz para uma unica
+        // consulta SQL (OUTER APPLY), em vez de uma ida ao banco por equipamento no app.
         var consulta =
             from e in contexto.Equipamentos.AsNoTracking()
             join i in contexto.Instituicoes.AsNoTracking() on e.InstituicaoId equals i.Id
             where instituicaoId == null || e.InstituicaoId == instituicaoId
             where ativo == null || e.Ativo == ativo
             orderby i.Nome, e.Nome
-            select new { Equipamento = e, Instituicao = i.Nome };
+            select new
+            {
+                Equipamento = e,
+                Instituicao = i.Nome,
+                UltimaLeitura = (Leitura?)contexto.Leituras.AsNoTracking()
+                    .Where(l => l.EquipamentoId == e.Id)
+                    .OrderByDescending(l => l.RegistradaEm)
+                    .ThenByDescending(l => l.Id)
+                    .FirstOrDefault(),
+            };
 
         var linhas = await consulta.ToListAsync(cancellationToken);
-        return linhas.Select(l => (l.Equipamento, l.Instituicao)).ToList();
+        return linhas.Select(l => (l.Equipamento, l.Instituicao, (Leitura?)l.UltimaLeitura)).ToList();
     }
 
-    public async Task<(Equipamento Equipamento, string Instituicao)?> ObterAsync(
+    public async Task<(Equipamento Equipamento, string Instituicao, Leitura? UltimaLeitura)?> ObterAsync(
         long id,
         CancellationToken cancellationToken = default)
     {
@@ -33,10 +44,19 @@ public sealed class EquipamentoRepository(FrioSolidarioDbContext contexto) : IEq
                 from e in contexto.Equipamentos.AsNoTracking()
                 join i in contexto.Instituicoes.AsNoTracking() on e.InstituicaoId equals i.Id
                 where e.Id == id
-                select new { Equipamento = e, Instituicao = i.Nome })
+                select new
+                {
+                    Equipamento = e,
+                    Instituicao = i.Nome,
+                    UltimaLeitura = (Leitura?)contexto.Leituras.AsNoTracking()
+                        .Where(l => l.EquipamentoId == e.Id)
+                        .OrderByDescending(l => l.RegistradaEm)
+                        .ThenByDescending(l => l.Id)
+                        .FirstOrDefault(),
+                })
             .FirstOrDefaultAsync(cancellationToken);
 
-        return linha is null ? null : (linha.Equipamento, linha.Instituicao);
+        return linha is null ? null : (linha.Equipamento, linha.Instituicao, linha.UltimaLeitura);
     }
 
     public Task<bool> ExisteAsync(long id, CancellationToken cancellationToken = default)

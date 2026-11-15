@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Só no build de debug: HTTP liberado para qualquer host, para apontar o app para a API rodando
+     em outro computador da rede (README, "Celular na mesma Wi-Fi"). Os builds release e demo usam
+     src/main, que só libera 10.0.2.2 e localhost. -->
+<network-security-config xmlns:tools="http://schemas.android.com/tools" tools:ignore="InsecureBaseConfiguration">
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

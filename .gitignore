@@ -24,6 +24,9 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+# ...menos o sourceSet de debug do Android, que guarda configuração versionada
+!mobile/app/src/debug/
+!mobile/app/src/debug/**
 x64/
 x86/
 [Ww][Ii][Nn]32/

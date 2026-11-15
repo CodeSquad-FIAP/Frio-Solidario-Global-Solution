@@ -24,4 +24,7 @@ public sealed class Alerta
     public DateTimeOffset? ResolvidoEm { get; set; }
 
     public long? ResolvidoPorId { get; set; }
+
+    /// <summary>Acao registrada na resolucao; nula enquanto aberto ou quando nao foi informada.</summary>
+    public AcaoTomada? AcaoTomada { get; set; }
 }

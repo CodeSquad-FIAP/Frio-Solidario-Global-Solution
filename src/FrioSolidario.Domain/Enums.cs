@@ -53,6 +53,17 @@ public enum StatusAlerta
     RESOLVIDO
 }
 
+/// <summary>
+/// O que o voluntario fez ao resolver o alerta. Opcional: alertas resolvidos antes deste campo
+/// existir (ou por um cliente que nao informa) ficam sem acao.
+/// </summary>
+public enum AcaoTomada
+{
+    AJUSTOU,
+    TRANSFERIU_LOTE,
+    DESCARTOU
+}
+
 public enum StatusLote
 {
     DISPONIVEL,

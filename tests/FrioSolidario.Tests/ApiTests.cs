@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FrioSolidario.Application.DTOs;
+using FrioSolidario.Application.Relatorios;
 using FrioSolidario.Application.Repositories;
 using FrioSolidario.Application.Security;
 using FrioSolidario.Domain;
@@ -73,6 +74,9 @@ internal sealed class ApiDeTeste : WebApplicationFactory<global::Program>
         // JwtBearer (antes destes callbacks) e o token sairia assinado com outra chave — 401 em tudo.
         builder.ConfigureServices(servicos =>
         {
+            // As listagens devolvem a ultima leitura de cada equipamento: o fake le os Itens daqui.
+            Equipamentos.Leituras = Leituras;
+
             servicos.RemoveAll<ILeituraRepository>();
             servicos.RemoveAll<IAlertaRepository>();
             servicos.RemoveAll<IEquipamentoRepository>();
@@ -191,6 +195,51 @@ public class ApiTests
         Assert.Single(app.Alertas.Itens);
     }
 
+    /// <summary>
+    /// O painel do app precisa da lista ja com a ultima leitura de cada equipamento: sem isso ele
+    /// fazia uma requisicao por equipamento (N+1). Prova o dado no corpo da rota da instituicao.
+    /// </summary>
+    [Fact]
+    public async Task EquipamentosDaInstituicao_TrazemAUltimaLeitura()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente(instituicaoId: 1);
+
+        await cliente.PostAsJsonAsync("/api/leituras", Leitura(1, 2.5m, 0), JsonDaApi.Opcoes);
+        await cliente.PostAsJsonAsync("/api/leituras", Leitura(1, 3.5m, 1), JsonDaApi.Opcoes);
+
+        var daInstituicao1 = await cliente.GetFromJsonAsync<List<EquipamentoResponse>>(
+            "/api/instituicoes/1/equipamentos", JsonDaApi.Opcoes);
+
+        var camara = Assert.Single(daInstituicao1!);
+        Assert.NotNull(camara.UltimaLeitura);
+        Assert.Equal(3.5m, camara.UltimaLeitura!.Temperatura);
+        Assert.Equal(1, camara.UltimaLeitura.EquipamentoId);
+
+        var daInstituicao2 = await app.Cliente(instituicaoId: 2).GetFromJsonAsync<List<EquipamentoResponse>>(
+            "/api/instituicoes/2/equipamentos", JsonDaApi.Opcoes);
+
+        var freezer = Assert.Single(daInstituicao2!);
+        Assert.Null(freezer.UltimaLeitura);
+    }
+
+    /// <summary>
+    /// Sem datas o relatório cobre 7 dias incluindo hoje (não 8): o nome do arquivo traz a janela.
+    /// </summary>
+    [Fact]
+    public async Task RelatorioSemDatas_CobreSeteDiasIncluindoHoje()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente(instituicaoId: 1);
+
+        var resposta = await cliente.GetAsync("/api/equipamentos/1/relatorio");
+
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+        var hoje = DateOnly.FromDateTime(FusoDoProjeto.Local(DateTimeOffset.Now).DateTime);
+        var nome = resposta.Content.Headers.ContentDisposition!.FileName!.Trim('"');
+        Assert.Equal($"relatorio-equipamento-1-{hoje.AddDays(-6):yyyyMMdd}-{hoje:yyyyMMdd}.pdf", nome);
+    }
+
     /// <summary>Rota aninhada do card do CRUD: `/instituicoes/{id}/equipamentos` respeita a instituição do token.</summary>
     [Fact]
     public async Task InstituicaoEquipamentos_DaPropriaInstituicao_ListaEDeOutra_403()
@@ -239,6 +288,85 @@ public class ApiTests
         Assert.Equal(HttpStatusCode.Conflict, deNovo.StatusCode);
     }
 
+
+    /// <summary>
+    /// O painel do app precisa só da leitura mais recente de cada equipamento: a rota devolve uma
+    /// leitura, mesmo que ela seja mais antiga que a janela de 24h do gráfico.
+    /// </summary>
+    [Fact]
+    public async Task UltimaLeitura_DevolveAMaisRecente_MesmoForaDaJanelaDoGrafico()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente(instituicaoId: 2);
+
+        foreach (var (temperatura, quando) in new[]
+                 {
+                     (-21m, DateTimeOffset.UtcNow.AddDays(-9)),
+                     (-19.5m, DateTimeOffset.UtcNow.AddDays(-3)),
+                 })
+        {
+            var gravada = await cliente.PostAsJsonAsync(
+                "/api/leituras",
+                new LeituraRequest(4, temperatura, 75m, false, quando, OrigemLeitura.SIMULADO),
+                JsonDaApi.Opcoes);
+            Assert.Equal(HttpStatusCode.Created, gravada.StatusCode);
+        }
+
+        var ultima = await cliente.GetFromJsonAsync<LeituraResponse>(
+            "/api/equipamentos/4/leituras/ultima", JsonDaApi.Opcoes);
+
+        Assert.NotNull(ultima);
+        Assert.Equal(-19.5m, ultima!.Temperatura);
+        Assert.Equal(4, ultima.EquipamentoId);
+    }
+
+    /// <summary>Equipamento sem leitura nenhuma responde 204, que o app mostra como "sem leitura".</summary>
+    [Fact]
+    public async Task UltimaLeitura_SemLeitura_Volta204()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente(instituicaoId: 2);
+
+        var resposta = await cliente.GetAsync("/api/equipamentos/4/leituras/ultima");
+
+        Assert.Equal(HttpStatusCode.NoContent, resposta.StatusCode);
+    }
+
+    /// <summary>A rota segue o mesmo isolamento da série: outra instituição é 403, id inexistente é 404.</summary>
+    [Fact]
+    public async Task UltimaLeitura_RespeitaInstituicaoEExistencia()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente(instituicaoId: 2);
+
+        var deOutra = await cliente.GetAsync("/api/equipamentos/1/leituras/ultima");
+        Assert.Equal(HttpStatusCode.Forbidden, deOutra.StatusCode);
+
+        var inexistente = await cliente.GetAsync("/api/equipamentos/9999/leituras/ultima");
+        Assert.Equal(HttpStatusCode.NotFound, inexistente.StatusCode);
+    }
+
+    /// <summary>
+    /// "7 dias por padrão" (README e plano de testes) com o fim inclusivo: hoje e os 6 dias anteriores.
+    /// O período sai no nome do arquivo, então o teste não depende do relógio.
+    /// </summary>
+    [Fact]
+    public async Task Relatorio_SemDatas_CobreSeteDiasContandoHoje()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente(instituicaoId: 2);
+
+        var resposta = await cliente.GetAsync("/api/equipamentos/4/relatorio");
+
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+        var nome = resposta.Content.Headers.ContentDisposition?.FileName?.Trim('"');
+        Assert.NotNull(nome);
+
+        var partes = Path.GetFileNameWithoutExtension(nome!).Split('-');
+        var inicio = DateOnly.ParseExact(partes[^2], "yyyyMMdd");
+        var fim = DateOnly.ParseExact(partes[^1], "yyyyMMdd");
+        Assert.Equal(7, fim.DayNumber - inicio.DayNumber + 1);
+    }
 
     /// <summary>Lote nasce DISPONIVEL na instituicao do token; a retirada o tira do estoque uma vez so.</summary>
     [Fact]
@@ -314,5 +442,71 @@ public class ApiTests
         var inativos = await cliente.GetFromJsonAsync<List<EquipamentoResponse>>(
             "/api/equipamentos?ativo=false", JsonDaApi.Opcoes);
         Assert.Single(inativos!);
+    }
+
+    /// <summary>Abre um alerta pela regra (3 leituras acima da faixa da câmara) e devolve o id dele.</summary>
+    private static async Task<long> AbrirAlertaAsync(HttpClient cliente)
+    {
+        LeituraRegistradaResponse? corpo = null;
+        for (var i = 0; i < 3; i++)
+        {
+            var resposta = await cliente.PostAsJsonAsync("/api/leituras", Leitura(1, 7.8m, i), JsonDaApi.Opcoes);
+            corpo = await resposta.Content.ReadFromJsonAsync<LeituraRegistradaResponse>(JsonDaApi.Opcoes);
+        }
+
+        return Assert.Single(corpo!.AlertasAbertos).Id;
+    }
+
+    /// <summary>A ação escolhida no app fica gravada no alerta e aparece no histórico de resolvidos.</summary>
+    [Fact]
+    public async Task Resolver_ComAcao_GravaEDevolveAAcaoTomada()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente();
+        var id = await AbrirAlertaAsync(cliente);
+
+        var resposta = await cliente.PatchAsJsonAsync(
+            $"/api/alertas/{id}/resolver", new ResolverAlertaRequest(AcaoTomada.TRANSFERIU_LOTE), JsonDaApi.Opcoes);
+
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+        var resolvido = await resposta.Content.ReadFromJsonAsync<AlertaResponse>(JsonDaApi.Opcoes);
+        Assert.Equal(StatusAlerta.RESOLVIDO, resolvido!.Status);
+        Assert.Equal(AcaoTomada.TRANSFERIU_LOTE, resolvido.AcaoTomada);
+
+        var historico = await cliente.GetFromJsonAsync<List<AlertaResponse>>(
+            "/api/alertas?status=RESOLVIDO", JsonDaApi.Opcoes);
+        Assert.Equal(AcaoTomada.TRANSFERIU_LOTE, Assert.Single(historico!).AcaoTomada);
+    }
+
+    /// <summary>Compatibilidade: quem ainda chama o PATCH sem corpo continua resolvendo, sem ação.</summary>
+    [Fact]
+    public async Task Resolver_SemCorpo_ContinuaFuncionando()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente();
+        var id = await AbrirAlertaAsync(cliente);
+
+        var resposta = await cliente.PatchAsync($"/api/alertas/{id}/resolver", content: null);
+
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+        var resolvido = await resposta.Content.ReadFromJsonAsync<AlertaResponse>(JsonDaApi.Opcoes);
+        Assert.Equal(StatusAlerta.RESOLVIDO, resolvido!.Status);
+        Assert.Null(resolvido.AcaoTomada);
+    }
+
+    /// <summary>Ação fora do vocabulário é 400 e o alerta continua aberto.</summary>
+    [Fact]
+    public async Task Resolver_ComAcaoForaDoVocabulario_Devolve400()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente();
+        var id = await AbrirAlertaAsync(cliente);
+
+        var resposta = await cliente.PatchAsync(
+            $"/api/alertas/{id}/resolver",
+            new StringContent("{\"acao\":\"QUEIMOU\"}", System.Text.Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
+        Assert.Equal(StatusAlerta.ABERTO, Assert.Single(app.Alertas.Itens).Status);
     }
 }

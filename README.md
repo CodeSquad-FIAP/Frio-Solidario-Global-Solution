@@ -16,6 +16,7 @@ src/
 └── FrioSolidario.Api/             # controllers, Swagger, injeção de dependência
 tests/
 └── FrioSolidario.Tests/           # testes xUnit: regra pura, serviço e API via TestServer (sem banco)
+mobile/                            # app Android (Kotlin + Jetpack Compose), projeto Gradle à parte (Kevin)
 ```
 
 O fluxo é sempre **Controller → Service → Repository**: o controller não conhece banco, o serviço não
@@ -56,7 +57,7 @@ dotnet test --filter Caso=5   # menos de 3 leituras fora da faixa não abrem ale
 dotnet test --filter Caso=6   # 3 leituras seguidas abrem 1 alerta, sem duplicar
 ```
 
-São **57 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
+São **66 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
 severidade por desvio), o fluxo do `POST /api/leituras` com repositórios em memória
 (`LeituraServiceTests`: um alerta aberto por tipo, sem duplicar) e a API por HTTP (`ApiTests`: 401 sem
 token, casos 5 e 6, a rota `/instituicoes/{id}/equipamentos` e o DELETE lógico do equipamento). Os
@@ -136,8 +137,9 @@ equipamento no cadastro muda o comportamento sem tocar em código.
 | POST | `/api/auth/login` | autentica e devolve o token (pública; 10 tentativas/min por IP) |
 | POST | `/api/leituras` | registra leitura do sensor e devolve os alertas que ela abriu |
 | GET | `/api/equipamentos/{id}/leituras?periodo=24h\|7d` | série do gráfico (24h por padrão) |
+| GET | `/api/equipamentos/{id}/leituras/ultima` | leitura mais recente, de quando for (painel do app); 204 se o equipamento nunca enviou |
 | GET | `/api/alertas?status=ABERTO&equipamentoId=` | fila de alertas da instituição do token, mais grave primeiro |
-| PATCH | `/api/alertas/{id}/resolver` | resolve o alerta com o usuário do token (só da própria instituição) |
+| PATCH | `/api/alertas/{id}/resolver` | resolve o alerta com o usuário do token (só da própria instituição); corpo opcional `{"acao":"AJUSTOU"}` grava a ação tomada |
 | GET | `/api/lotes?status=` | lotes doados da instituição do token, por validade (o que vence primeiro) |
 | GET | `/api/lotes/{id}` | busca um lote (403 se for de outra instituição) |
 | POST | `/api/lotes` | cadastra lote doado — `ADMIN`; nasce `DISPONIVEL` (descrição, categoria, kg, validade) |
@@ -184,7 +186,12 @@ Ordem que o app segue, com o corpo real de cada resposta (medido rodando a API):
 
 1. `POST /api/auth/login` → guarda `token` e `expiraEm`. Em todo request seguinte:
    `Authorization: Bearer <token>`.
-2. `GET /api/equipamentos?instituicaoId=1` → lista com `nome`, `tipo`, `tempMin`, `tempMax`, `umidMax`.
+2. `GET /api/equipamentos?instituicaoId=1` (ou `?ativo=true`) → lista com `nome`, `tipo`, `tempMin`,
+   `tempMax`, `umidMax` e **`ultimaLeitura`**: a leitura mais recente de cada equipamento, ou `null`
+   se ele nunca enviou nenhuma. O painel monta o semáforo só com essa resposta — uma requisição por
+   ciclo de 15 s. O mesmo campo vem em `GET /api/equipamentos/{id}`, então o cabeçalho do detalhe
+   também não busca a leitura à parte. `GET /api/equipamentos/{id}/leituras/ultima` continua
+   disponível para quem só quer a última leitura de um equipamento.
 3. `GET /api/equipamentos/{id}/leituras?periodo=24h` → série pronta para o gráfico, **já em ordem
    cronológica** (a mais antiga primeiro):
 
@@ -202,8 +209,12 @@ Ordem que o app segue, com o corpo real de cada resposta (medido rodando a API):
   "criadoEm":"2026-11-10T23:30:00+00:00","resolvidoEm":null,"resolvidoPorId":null}]
 ```
 
-5. `PATCH /api/alertas/{id}/resolver` (sem corpo) → devolve o alerta com `status: "RESOLVIDO"`,
-   `resolvidoEm` e `resolvidoPorId`. Repetir a chamada devolve 409.
+5. `PATCH /api/alertas/{id}/resolver` → devolve o alerta com `status: "RESOLVIDO"`, `resolvidoEm` e
+   `resolvidoPorId`. O corpo é **opcional**: `{"acao":"AJUSTOU"}`, `"TRANSFERIU_LOTE"` ou `"DESCARTOU"`
+   grava o que o voluntário fez e volta em `acaoTomada` (também no `GET /api/alertas?status=RESOLVIDO`,
+   que é o histórico do app); sem corpo, `acaoTomada` fica `null`. Ação fora do vocabulário devolve 400
+   e repetir a chamada devolve 409. Banco já carregado precisa de
+   `db/migracoes/2026-11-15-alerta-acao-tomada.sql`.
 6. `GET /api/equipamentos/{id}/relatorio?de=2026-11-01&ate=2026-11-10` → **corpo é o PDF**
    (`Content-Type: application/pdf`, nome do arquivo em `Content-Disposition`). Salve os bytes em cache e
    abra com a folha de compartilhamento/impressão do Android. `de`/`ate` são opcionais (padrão: últimos
@@ -385,7 +396,7 @@ sensor não tem canal para receber erro — o log é a evidência. Medido em
 |---|---|---|
 | Emulador Android | `http://10.0.2.2:5199` | nada além do emulador (`10.0.2.2` é o PC visto de dentro dele) |
 | Aparelho no USB | `http://localhost:5199` | `adb reverse tcp:5199 tcp:5199` (o cabo leva a porta do PC para o celular) |
-| Celular na mesma Wi-Fi | `http://<ip-do-pc>:5199` | API escutando em `0.0.0.0` e a porta liberada no firewall |
+| Celular na mesma Wi-Fi | `http://<ip-do-pc>:5199` | API escutando em `0.0.0.0`, a porta liberada no firewall e o app no build **debug** (os builds release e demo só aceitam HTTP sem TLS para `10.0.2.2` e `localhost`) |
 
 Para a API aceitar conexão de fora do PC (Wi-Fi na demo), suba com:
 
@@ -395,6 +406,48 @@ ASPNETCORE_URLS=http://0.0.0.0:5199 dotnet run --project src/FrioSolidario.Api
 
 e libere a porta uma vez: `netsh advfirewall firewall add rule name="Frio Solidario API" dir=in action=allow protocol=TCP localport=5199`.
 Com `localhost:5199` a API só responde na própria máquina — é a causa nº 1 de "o app não conecta".
+
+## App mobile (Kevin)
+
+App Android em `mobile/` (Kotlin + Jetpack Compose, Android 7 ou mais novo). Cinco telas e a exportação
+do relatório, todas lendo e gravando pela API — não há dado fixo no app:
+
+| Tela | O que faz | Rotas da API |
+|---|---|---|
+| Login | e-mail e senha; guarda o token até o logout ou o 401 | `POST /api/auth/login` |
+| Painel | equipamentos ativos com semáforo e horário da última leitura; atualiza a cada 15 s | `GET /api/equipamentos?ativo=true` (traz `ultimaLeitura`) |
+| Detalhe | gráfico de 24 h / 7 d com os limites da faixa, tabela das últimas leituras, relatório em PDF | `GET /api/equipamentos/{id}` (traz `ultimaLeitura`), `.../leituras?periodo=`, `.../relatorio?de=&ate=` |
+| Alertas | fila de abertos (atualiza a cada 10 s), resolução com a ação tomada e histórico | `GET /api/alertas?status=`, `PATCH /api/alertas/{id}/resolver` |
+| Cadastro | equipamento com faixa; lote doado e saída do estoque — só `ADMIN` vê essas ações | `POST /api/equipamentos`, `GET`/`POST /api/lotes`, `PATCH /api/lotes/{id}/retirada` |
+
+O semáforo usa a faixa **do próprio equipamento**: vermelho com a temperatura fora de `tempMin`..`tempMax`;
+amarelo dentro da faixa mas encostando em um limite (10% da largura da faixa, entre 0,5 °C e um quarto
+dela), com umidade acima de `umidMax` ou com a porta aberta; verde no resto; cinza sem leitura. No
+painel a cor não fica só no texto: cada equipamento é uma linha pintada com o estado — cheia de
+vermelho fora da faixa, amarela em atenção, verde clara em ordem. Se a
+última leitura tem mais de 30 minutos o cartão vira "Sem sinal", seja qual for a temperatura dela: sensor
+parado não prova que o equipamento está frio, e o painel deixa de dizer "tudo dentro da faixa". A regra
+está em `mobile/app/src/main/java/br/com/fiap/friosolidario/dominio/Semaforo.kt`.
+
+```bash
+cd mobile
+./gradlew testDebugUnitTest      # 119 testes, sem aparelho e sem API
+./gradlew assembleDemo            # APK para demonstrar em aparelho: sem modo de depuração, bem mais fluido
+./gradlew installDebug           # instala no emulador ou no aparelho conectado
+```
+
+Precisa do Android SDK (plataforma 36) e de um JDK 17 ou mais novo; abrir a pasta `mobile/` no Android Studio também
+funciona. A URL da API fica em **um lugar só**, `frio.apiUrl` em `mobile/gradle.properties` (o código lê
+por `core/ApiConfig.kt`). O padrão é o do emulador, `http://10.0.2.2:5199/`; para aparelho no USB:
+
+```bash
+adb reverse tcp:5199 tcp:5199
+./gradlew installDebug -Pfrio.apiUrl=http://localhost:5199/
+```
+
+Os usuários são os da seção "Login (demo)". Erro de conexão, 401, 500, lista vazia e carregamento têm o
+mesmo tratamento nas cinco telas (mensagem + "Tentar de novo"); 401 em qualquer tela volta ao login. As
+capturas e o roteiro executado estão em `docs/evidencias/app-mobile.md`.
 
 ## Estado atual
 
@@ -407,12 +460,13 @@ Com `localhost:5199` a API só responde na própria máquina — é a causa nº 
 | Login com JWT | pronto — `POST /api/auth/login`, BCrypt (gerar e conferir) + token com papel e instituição |
 | Perfis ADMIN e VOLUNTARIO | pronto — escritas do CRUD de instituições e equipamentos exigem `ADMIN` (401 sem token, 403 para `VOLUNTARIO`) |
 | Segurança (JWT, validação, anti-SQLi, anti-XSS) | pronto — todas as rotas com token, isolamento por instituição, limite no login, cabeçalhos de segurança; ver seção "Segurança" |
-| Leituras (ingestão + série) | pronto — `POST /api/leituras` (201) e `GET /api/equipamentos/{id}/leituras?periodo=24h\|7d` |
+| Leituras (ingestão + série) | pronto — `POST /api/leituras` (201), `GET /api/equipamentos/{id}/leituras?periodo=24h\|7d` e `GET .../leituras/ultima` (painel do app) |
 | Regra de faixa → alerta | pronto — 3 leituras seguidas fora da faixa, porta aberta por tempo, severidade por desvio; `GET /api/alertas` e `PATCH /api/alertas/{id}/resolver` |
-| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **57 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
+| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **66 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
 | Lotes doados | pronto — `/api/lotes` (lista, busca, cadastro e retirada), sempre na instituição do token; alimenta os indicadores de kg doados e perda |
-| App mobile | Kevin |
+| App mobile | pronto — 5 telas + relatório em PDF integrados à API, em `mobile/`; 119 testes unitários; ver "App mobile (Kevin)" e `docs/evidencias/app-mobile.md` |
+| Ação tomada na resolução do alerta | pronto — corpo opcional em `PATCH /api/alertas/{id}/resolver`, coluna `alerta.acao_tomada`; banco já carregado precisa de `db/migracoes/2026-11-15-alerta-acao-tomada.sql` |
 | IoT (MQTT) | pronto — ponte na API (`frio/equipamentos/{id}/leitura`) + simulador `simulacao/sensor.py` com 5 cenários e testes de contrato em `simulacao/teste_contrato.py` (ver "Ponte MQTT") |
 
 ## Uso de IA
@@ -424,7 +478,7 @@ com revisão humana do resultado. Preencha a sua linha — a tabela vai para o P
 |---|---|---|---|
 | André | 554952 | a preencher | a preencher |
 | Arthur | 97781 | a preencher | a preencher |
-| Kevin | 557898 | a preencher | a preencher |
+| Kevin | 557898 | Claude Code (Claude) | geração do código e dos testes do app mobile, da ação tomada no alerta (API, schema e teste) e da documentação do app; execução do roteiro de evidências |
 | Roger | 97540 | a preencher | a preencher |
 | Yasmin | 557413 | a preencher (sugestão: Hermes Agent + Claude Code) | geração e revisão de código da API, testes de integração e revisão do README |
 
@@ -436,7 +490,9 @@ instituição real foi usada; os dados do projeto são fictícios.
 
 | Item | Situação | Dono |
 |---|---|---|
-| App mobile | não iniciado no repositório da API | Kevin |
+| App mobile: impressora física | o roteiro rodou em Fire TV (paisagem) e em celular em pé contra PostgreSQL 18.6, com a prévia de impressão do Android abrindo o PDF (`docs/evidencias/app-mobile.md`); falta só mandar para uma impressora de verdade | Kevin |
+| App mobile em tablet | a interface nova foi conferida em celular, com o roteiro de erros repetido (`docs/evidencias/app-mobile.md`); o trilho lateral de tela larga não foi visto em aparelho | Kevin |
+| Notificação fora do app | o alerta aparece com o app aberto (atualização a cada 10 s); não há push com o app fechado | grupo |
 | Sensor MQTT publicando ao vivo | ponte da API pronta e medida (~1 s) + `simulacao/sensor.py` pronto com 5 cenários e validado contra o contrato (`simulacao/teste_contrato.py`); a demo ao vivo usa sensores simulados via software em vez de ESP32 físico | Roger |
 | Testes automatizados (xUnit) abrangentes | os casos 5, 6 e o 401 do caso 7 rodam sem banco (regra, serviço e API via TestServer); login com BCrypt, perfis, CRUD restante e relatório seguem verificados por chamada real, com evidência em `docs/` | Arthur |
 | HTTPS | a demo roda em HTTP na rede local (`:5199`); em produção a API ficaria atrás de TLS | grupo |

@@ -113,6 +113,8 @@ CREATE TABLE alerta (
     criado_em TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     resolvido_em TIMESTAMPTZ,
     resolvido_por_id BIGINT,
+    -- O que o voluntário fez ao resolver. Opcional: alerta resolvido sem informar a ação fica NULL.
+    acao_tomada VARCHAR(16),
 
     CONSTRAINT fk_alerta_equipamento
         FOREIGN KEY (equipamento_id)
@@ -163,6 +165,15 @@ CREATE TABLE alerta (
                 AND resolvido_em IS NOT NULL
                 AND resolvido_por_id IS NOT NULL
                 AND resolvido_em >= criado_em
+            )
+        ),
+
+    CONSTRAINT ck_alerta_acao_tomada
+        CHECK (
+            acao_tomada IS NULL
+            OR (
+                status = 'RESOLVIDO'
+                AND acao_tomada IN ('AJUSTOU', 'TRANSFERIU_LOTE', 'DESCARTOU')
             )
         )
 );

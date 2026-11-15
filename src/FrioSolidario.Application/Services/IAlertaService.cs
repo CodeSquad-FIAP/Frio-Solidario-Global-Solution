@@ -19,5 +19,6 @@ public interface IAlertaService
         long id,
         long resolvidoPorId,
         long? instituicaoDoToken = null,
+        AcaoTomada? acao = null,
         CancellationToken cancellationToken = default);
 }
