@@ -127,13 +127,28 @@ public static class LeituraMqttMensagem
                 return false;
             }
 
+            // Origem vem do payload quando o sensor declara (o simulador do Roger manda "SIMULADO");
+            // sem declaracao, o dado so pode ter vindo do sensor fisico.
+            var origem = OrigemLeitura.SENSOR;
+            var textoOrigem = LerTexto(raiz, "origem", "origemLeitura");
+            if (textoOrigem is not null)
+            {
+                if (!Enum.TryParse<OrigemLeitura>(textoOrigem, ignoreCase: true, out var origemLida))
+                {
+                    motivo = $"origem '{textoOrigem}' nao e SENSOR nem SIMULADO";
+                    return false;
+                }
+
+                origem = origemLida;
+            }
+
             leitura = new LeituraRequest(
                 equipamentoId,
                 temperatura.Value,
                 umidade.Value,
                 portaAberta,
                 registradaEm,
-                OrigemLeitura.SENSOR);
+                origem);
 
             motivo = string.Empty;
             return true;

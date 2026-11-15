@@ -44,6 +44,25 @@ public class LeituraMqttTests
     }
 
     /// <summary>
+    /// O simulador do Roger declara <c>"origem": "SIMULADO"</c> no payload. Se a ponte ignorasse isso,
+    /// o banco marcaria toda leitura de ensaio como se fosse do sensor fisico e a demo perderia a
+    /// distincao que o edital pede (prototipo vs. dado real).
+    /// </summary>
+    [Fact]
+    public void OrigemDeclaradaNoPayload_EhRespeitada()
+    {
+        const string payload = """
+            {"temperatura": 7.8, "umidade": 55, "portaAberta": false, "origem": "SIMULADO"}
+            """;
+
+        var ok = LeituraMqttMensagem.TentarLer(
+            "frio/equipamentos/4/leitura", payload, Prefixo, out var leitura, out var motivo);
+
+        Assert.True(ok, motivo);
+        Assert.Equal(OrigemLeitura.SIMULADO, leitura!.Origem);
+    }
+
+    /// <summary>
     /// Script de sensor em Python costuma sair em snake_case e com numero em texto. Recusar por isso
     /// seria recusar o proprio Roger na demo.
     /// </summary>
@@ -99,6 +118,7 @@ public class LeituraMqttTests
     [InlineData("""{"umidade": 50}""", "temperatura")]
     [InlineData("""{"temperatura": 5, "umidade": 50, "registradaEm": "ontem"}""", "data")]
     [InlineData("""{"temperatura": 5, "umidade": 50, "equipamentoId": 9}""", "equipamento")]
+    [InlineData("""{"temperatura": 5, "umidade": 50, "origem": "CHUTE"}""", "origem")]
     [InlineData("""{"temperatura": 5, "umidade": """, "JSON")]
     [InlineData("", "vazio")]
     public void MensagemInvalida_EhRecusadaComMotivo(string payload, string trechoDoMotivo)

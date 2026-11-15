@@ -153,7 +153,7 @@ Cenário 2B (`40 s`) em relação ao Cenário 2A (`>= 5 min`).
 - [x] Capturar tela do terminal com o log da ponte (`MQTT: equipamento ... -> leitura ..., 1 alerta(s) aberto(s).`) — **feito**: log colado em §6.1–§6.4.
 - [x] Capturar tela do `GET /api/alertas` (autenticado com Bearer JWT) mostrando o alerta aberto — **feito**: JSON real colado em §6.6.
 - [x] Salvar os prints em `docs/evidencias/prints/`. — **feito**: `app-painel-critico.png`, `app-alertas-temp-alta.png`, `app-detalhe-freezer.png` (e os `caso-*` da frente de API).
-- [x] Vídeo curto de tela do app recebendo o alerta — **feito**: `docs/evidencias/video-demo-app-15-11-2026.mp4` (1 min 17 s), ver §6.7.
+- [x] Vídeo curto de tela do app recebendo o alerta — **feito**: `docs/evidencias/video-demo-app-15-11-2026.mp4` (1 min 17 s), ver §6.7; e o vídeo com o projeto inteiro na mesma gravação (app + sensor + ponte MQTT + banco), `docs/evidencias/video-projeto-completo-15-11-2026.mp4` (29 s), ver §6.8.
 
 ---
 
@@ -321,3 +321,45 @@ Prints: `docs/evidencias/prints/app-painel-critico.png`, `app-alertas-temp-alta.
 passou pela ponte e foi gravada no PostgreSQL. É a mesma corrente que a banca vê quando o `sensor.py` roda
 no palco. Em aparelho físico, troque o alvo por `adb reverse tcp:5199 tcp:5199` e
 `./gradlew :app:installDebug -Pfrio.apiUrl=http://localhost:5199/`.
+
+### 6.8 O projeto inteiro na mesma gravação: sensor → MQTT → API → banco → app
+
+Vídeo `docs/evidencias/video-projeto-completo-15-11-2026.mp4` (29 s, 1920×1080). Duas colunas gravadas ao
+mesmo tempo: à esquerda o app no emulador, à direita o console real com a saída do simulador e o log da API.
+
+| tempo | esquerda (app Android) | direita (console: sensor + API + banco) |
+|---|---|---|
+| 0:00 | Painel: Freezer **6,0 °C** vermelho, "Fora da faixa de -25,0 °C a -18,0 °C · agora", badge **2** no sino | `sensor: -> leitura 3 (7.8 C, +4.0s): dispara 1 alerta TEMP_ALTA (CRITICA)` |
+| 0:05 | Balcão 4,1 °C em atenção (porta aberta) | `sensor: [mqtt] -> frio/equipamentos/4/leitura {"temperatura": 7.8, ..., "origem": "SIMULADO"}` |
+| 0:13 | Alertas: "**Temperatura alta** · Freezer de congelados · Severidade crítica · aberto agora · 15/11 22:11" + "Porta aberta · Balcão refrigerado de doações · média" | `MQTT: equipamento 4 7.8C / 75.0% porta fechada -> leitura 37, 1 alerta(s) aberto(s)` |
+| 0:20 | ainda em Alertas, com "Resolver" nos dois cartões | `BANCO: 6 \| Freezer de congelados \| TEMP_ALTA \| CRITICA \| ABERTO \| 7.80 \| SIMULADO` e `BANCO: 5 \| Câmara \| TEMP_ALTA \| CRITICA \| RESOLVIDO \| 7.20 \| SIMULADO` |
+
+Comandos da execução:
+
+```bash
+# coluna esquerda (app) — mesma instalação do §6.7
+adb shell screenrecord --bit-rate 8000000 --time-limit 50 /sdcard/demo5.mp4
+adb shell input tap 540 1710      # aba Alertas
+# coluna direita (console): janela mostrando `Get-Content api.log -Wait | Select-String 'MQTT:|sensor'`
+ffmpeg -f gdigrab -framerate 15 -offset_x 0 -offset_y 0 -video_size 1100x660 -t 50 -i desktop console.mp4
+# disparo do cenário enquanto as duas gravam
+python simulacao/sensor.py --cenario quebra-compressor --rapido
+# composição (ffmpeg overlay+hstack: app 608x1080 à esquerda, console 1300x780 à direita)
+```
+
+**Integração com a parte do Roger (origem do dado):** a ponte MQTT passou a ler `origem`/`origemLeitura` do
+payload em `src/FrioSolidario.Infrastructure/Mqtt/LeituraMqttMensagem.cs` (`Enum.TryParse`, fallback
+`SENSOR`, recusa de qualquer valor fora de `SENSOR`/`SIMULADO`), coberto por
+`tests/FrioSolidario.Tests/LeituraMqttTests.cs`. O simulador publica `"origem": "SIMULADO"` e é isso que
+fica no banco:
+
+```
+select id, equipamento_id, temperatura, origem from leitura order by id desc limit 4;
+ 34 | 4 | 7.90 | SIMULADO
+ 33 | 4 | 7.80 | SIMULADO
+ 32 | 4 | 6.00 | SIMULADO
+ 31 | 4 | 4.00 | SIMULADO
+```
+
+**A UI do app não foi alterada** — a distinção `SIMULADO` vive no banco e na API (campo `origem` do DTO);
+o app exibe o mesmo layout de antes.
