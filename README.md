@@ -16,6 +16,7 @@ src/
 └── FrioSolidario.Api/             # controllers, Swagger, injeção de dependência
 tests/
 └── FrioSolidario.Tests/           # testes xUnit: regra pura, serviço e API via TestServer (sem banco)
+mobile/                            # app Android (Kotlin + Jetpack Compose), projeto Gradle à parte (Kevin)
 ```
 
 O fluxo é sempre **Controller → Service → Repository**: o controller não conhece banco, o serviço não
@@ -324,6 +325,43 @@ ASPNETCORE_URLS=http://0.0.0.0:5199 dotnet run --project src/FrioSolidario.Api
 e libere a porta uma vez: `netsh advfirewall firewall add rule name="Frio Solidario API" dir=in action=allow protocol=TCP localport=5199`.
 Com `localhost:5199` a API só responde na própria máquina — é a causa nº 1 de "o app não conecta".
 
+## App mobile (Kevin)
+
+App Android em `mobile/` (Kotlin + Jetpack Compose, Android 7 ou mais novo). Cinco telas e a exportação
+do relatório, todas lendo e gravando pela API — não há dado fixo no app:
+
+| Tela | O que faz | Rotas da API |
+|---|---|---|
+| Login | e-mail e senha; guarda o token até o logout ou o 401 | `POST /api/auth/login` |
+| Painel | equipamentos ativos com semáforo e horário da última leitura; atualiza a cada 15 s | `GET /api/equipamentos?ativo=true`, `GET /api/equipamentos/{id}/leituras` |
+| Detalhe | gráfico de 24 h / 7 d com os limites da faixa, tabela das últimas leituras, relatório em PDF | `GET /api/equipamentos/{id}`, `.../leituras?periodo=`, `.../relatorio?de=&ate=` |
+| Alertas | fila de abertos (atualiza a cada 10 s), resolução com a ação tomada e histórico | `GET /api/alertas?status=`, `PATCH /api/alertas/{id}/resolver` |
+| Cadastro | equipamento com faixa; lote doado e saída do estoque — só `ADMIN` vê essas ações | `POST /api/equipamentos`, `GET`/`POST /api/lotes`, `PATCH /api/lotes/{id}/retirada` |
+
+O semáforo usa a faixa **do próprio equipamento**: vermelho com a temperatura fora de `tempMin`..`tempMax`;
+amarelo dentro da faixa mas encostando em um limite (10% da largura da faixa, entre 0,5 °C e um quarto
+dela), com umidade acima de `umidMax` ou com a porta aberta; verde no resto; cinza sem leitura. A regra
+está em `mobile/app/src/main/java/br/com/fiap/friosolidario/dominio/Semaforo.kt`.
+
+```bash
+cd mobile
+./gradlew testDebugUnitTest      # 95 testes, sem aparelho e sem API
+./gradlew installDebug           # instala no emulador ou no aparelho conectado
+```
+
+Precisa do Android SDK (plataforma 36) e de um JDK 17; abrir a pasta `mobile/` no Android Studio também
+funciona. A URL da API fica em **um lugar só**, `frio.apiUrl` em `mobile/gradle.properties` (o código lê
+por `core/ApiConfig.kt`). O padrão é o do emulador, `http://10.0.2.2:5199/`; para aparelho no USB:
+
+```bash
+adb reverse tcp:5199 tcp:5199
+./gradlew installDebug -Pfrio.apiUrl=http://localhost:5199/
+```
+
+Os usuários são os da seção "Login (demo)". Erro de conexão, 401, 500, lista vazia e carregamento têm o
+mesmo tratamento nas cinco telas (mensagem + "Tentar de novo"); 401 em qualquer tela volta ao login. As
+capturas e o roteiro executado estão em `docs/evidencias/app-mobile.md`.
+
 ## Estado atual
 
 | Parte | Situação |
@@ -340,7 +378,8 @@ Com `localhost:5199` a API só responde na própria máquina — é a causa nº 
 | Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **60 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
 | Lotes doados | pronto — `/api/lotes` (lista, busca, cadastro e retirada), sempre na instituição do token; alimenta os indicadores de kg doados e perda |
-| App mobile | Kevin |
+| App mobile | pronto — 5 telas + relatório em PDF integrados à API, em `mobile/`; 95 testes unitários; ver "App mobile (Kevin)" e `docs/evidencias/app-mobile.md` |
+| Ação tomada na resolução do alerta | pronto — corpo opcional em `PATCH /api/alertas/{id}/resolver`, coluna `alerta.acao_tomada`; banco já carregado precisa de `db/migracoes/2026-11-15-alerta-acao-tomada.sql` |
 | IoT (MQTT) | ponte pronta na API (tópico `frio/equipamentos/{id}/leitura`, ver "Ponte MQTT"); falta só o script do sensor publicando, do Roger |
 
 ## Uso de IA
@@ -352,7 +391,7 @@ com revisão humana do resultado. Preencha a sua linha — a tabela vai para o P
 |---|---|---|---|
 | André | 554952 | a preencher | a preencher |
 | Arthur | 97781 | a preencher | a preencher |
-| Kevin | 557898 | a preencher | a preencher |
+| Kevin | 557898 | Claude Code (Claude) | geração do código e dos testes do app mobile, da ação tomada no alerta (API, schema e teste) e da documentação do app; execução do roteiro de evidências |
 | Roger | 97540 | a preencher | a preencher |
 | Yasmin | 557413 | a preencher (sugestão: Hermes Agent + Claude Code) | geração e revisão de código da API, testes de integração e revisão do README |
 
@@ -364,7 +403,9 @@ instituição real foi usada; os dados do projeto são fictícios.
 
 | Item | Situação | Dono |
 |---|---|---|
-| App mobile | não iniciado no repositório da API | Kevin |
+| App mobile em celular | o roteiro de `docs/evidencias/app-mobile.md` rodou em um Fire TV Stick (paisagem, Android 9): falta conferir em celular em pé, imprimir o PDF de fato e abri-lo em um leitor | Kevin |
+| App mobile contra PostgreSQL | o roteiro usou a API com o banco em memória do EF Core; a coluna `alerta.acao_tomada` do `schema.sql` e o script de `db/migracoes/` ainda não rodaram em PostgreSQL | Kevin + André |
+| Notificação fora do app | o alerta aparece com o app aberto (atualização a cada 10 s); não há push com o app fechado | grupo |
 | Sensor MQTT publicando ao vivo | a ponte da API está pronta e medida (mensagem do broker vira leitura e alerta em ~1 s); o script do sensor publicando é que ainda não existe no repositório | Roger |
 | Testes automatizados (xUnit) abrangentes | os casos 5, 6 e o 401 do caso 7 rodam sem banco (regra, serviço e API via TestServer); login com BCrypt, perfis, CRUD restante e relatório seguem verificados por chamada real, com evidência em `docs/` | Arthur |
 | HTTPS | a demo roda em HTTP na rede local (`:5199`); em produção a API ficaria atrás de TLS | grupo |
