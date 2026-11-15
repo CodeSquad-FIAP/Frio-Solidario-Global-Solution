@@ -247,15 +247,17 @@ private fun compartilhar(contexto: Context, arquivo: File): String? = try {
 }
 
 /** Manda o PDF para a impressão do Android (impressora ou "Salvar como PDF"). */
-private fun imprimir(contexto: Context, arquivo: File): String? = try {
+private fun imprimir(contexto: Context, arquivo: File): String? {
     val atividade = contexto.atividade() ?: return "Não foi possível abrir a impressão."
     // Sem o recurso de impressão (TV, alguns tablets) o PrintManager não faz nada e não avisa.
     if (!atividade.packageManager.hasSystemFeature(PackageManager.FEATURE_PRINTING)) return SEM_IMPRESSAO
     val impressao = atividade.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: return SEM_IMPRESSAO
-    impressao.print("Frio Solidário - ${arquivo.nameWithoutExtension}", AdaptadorDePdf(arquivo), PrintAttributes.Builder().build())
-    null
-} catch (_: Exception) {
-    SEM_IMPRESSAO
+    return try {
+        impressao.print("Frio Solidário - ${arquivo.nameWithoutExtension}", AdaptadorDePdf(arquivo), PrintAttributes.Builder().build())
+        null
+    } catch (_: Exception) {
+        SEM_IMPRESSAO
+    }
 }
 
 private const val SEM_IMPRESSAO = "Este aparelho não tem serviço de impressão. Use Compartilhar para enviar o PDF."
