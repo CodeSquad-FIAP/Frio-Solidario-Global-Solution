@@ -153,7 +153,7 @@ Cenário 2B (`40 s`) em relação ao Cenário 2A (`>= 5 min`).
 - [x] Capturar tela do terminal com o log da ponte (`MQTT: equipamento ... -> leitura ..., 1 alerta(s) aberto(s).`) — **feito**: log colado em §6.1–§6.4.
 - [x] Capturar tela do `GET /api/alertas` (autenticado com Bearer JWT) mostrando o alerta aberto — **feito**: JSON real colado em §6.6.
 - [x] Salvar os prints em `docs/evidencias/prints/`. — **feito**: `app-painel-critico.png`, `app-alertas-temp-alta.png`, `app-detalhe-freezer.png` (e os `caso-*` da frente de API).
-- [x] Vídeo curto de tela do app recebendo o alerta — **feito**: `docs/evidencias/video-demo-app-15-11-2026.mp4` (1 min 17 s), ver §6.7; e o vídeo com o projeto inteiro na mesma gravação (app + sensor + ponte MQTT + banco), `docs/evidencias/video-projeto-completo-15-11-2026.mp4` (29 s), ver §6.8.
+- [x] Vídeo curto de tela do app recebendo o alerta — **feito**: `docs/evidencias/video-demo-app-15-11-2026.mp4` (1 min 17 s), ver §6.7; e o vídeo com o projeto inteiro na mesma gravação (app + sensor + ponte MQTT + banco), `docs/evidencias/video-projeto-completo-15-11-2026.mp4` (29 s), ver §6.8; e o fluxo completo do app, do login ao cadastro de lote e de equipamento (`docs/evidencias/video-app-fluxo-completo-15-11-2026.mp4`, 3 min 15 s), ver §6.9.
 
 ---
 
@@ -363,3 +363,35 @@ select id, equipamento_id, temperatura, origem from leitura order by id desc lim
 
 **A UI do app não foi alterada** — a distinção `SIMULADO` vive no banco e na API (campo `origem` do DTO);
 o app exibe o mesmo layout de antes.
+
+### 6.9 O app inteiro, do login ao cadastro: vídeo de fluxo completo
+
+Vídeo `docs/evidencias/video-app-fluxo-completo-15-11-2026.mp4` (3 min 15 s, 1080×1920, 3 MB) — gravação
+contínua do APK real contra a API real (PostgreSQL + `dotnet run` em `localhost:5199`, emulador com
+`frio.apiUrl=http://10.0.2.2:5199/`). O §6.7 mostra o alerta chegando e o §6.8 a cadeia sensor→banco; este
+percorre **todas as telas e as duas operações de escrita** do sistema.
+
+| tempo | tela | o que aparece / o que é feito |
+|---|---|---|
+| 0:00 | Login | campos vazios (sessão limpa com `pm clear`) |
+| 0:10 | Login | e-mail e senha digitados, botão em "Entrando…" |
+| 0:20 | Painel | "1 fora da faixa · 1 em atenção · 2 equipamentos": Freezer **7,9 °C** vermelho com "Ver o alerta", Balcão 4,1 °C em atenção |
+| 0:30 | Detalhe | **7,9 °C · Fora da faixa**, faixa −25 a −18 °C, umidade 71 %, porta fechada, botão "Relatório em PDF" |
+| 0:50 | Detalhe | gráfico "Temperatura · últimas 24 horas" com máxima/mínima, "Fora da faixa: 3 de 8" e leituras do período; alternância 24 horas / 7 dias |
+| 1:10 | Alertas | "**Temperatura alta** · Freezer de congelados · Severidade crítica · aberto há 2 min · 15/11 22:45" com **Resolver** |
+| 1:20 | Diálogo | "O que você fez?" com as três ações (ajustei / transferi / descartei) e "Marcar como resolvido" |
+| 1:30 | Alertas | "Nenhum alerta aberto" + aviso "Alerta resolvido: transferi o lote" |
+| 1:40 | Histórico | os dois alertas com **ação tomada**, hora da resolução e tempo aberto |
+| 1:50 | Lotes doados | 36,0 kg em estoque · 117,7 kg distribuídos · 21,8 kg perdidos |
+| 2:00 | Novo lote | formulário preenchido: "Caixas de iogurte naturais", Laticínios, 48 kg, validade no seletor de data |
+| 2:30 | Lotes | lista atualizada com o lote novo (48,0 kg) e estoque **84,0 kg** |
+| 2:40 | Novo equipamento | "Geladeira de sobremesas", tipo Geladeira, faixa 2 a 8 °C, umidade máxima 85 % |
+| 3:00 | Painel | **3 equipamentos**, com "Geladeira de sobremesas · Nenhuma leitura registrada" |
+
+**O que isso prova:** login com JWT, leitura/escrita reais (o lote e o equipamento criados na gravação estão
+no banco: `select nome, temp_min, temp_max, umid_max from equipamento where nome='Geladeira de sobremesas'`
+→ `2.00 | 8.00 | 85.00`), resolução de alerta com `acao_tomada`, e nenhum dado mockado.
+
+Gravação em cinco trechos com `adb shell screenrecord` dirigida por `adb shell input tap/text`; os trechos
+foram cortados e concatenados com `ffmpeg -filter_complex concat`. O `screenrecord` perde de 10 a 16 s finais
+ao receber `SIGINT`, então cada trecho foi gravado com folga e cortado depois.
