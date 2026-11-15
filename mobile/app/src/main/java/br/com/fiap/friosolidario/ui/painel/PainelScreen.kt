@@ -246,12 +246,15 @@ private fun Resumo(itens: List<EquipamentoNoPainel>) {
     val amarelos = itens.count { it.semaforo == Semaforo.AMARELO }
     val semLeitura = itens.count { it.semaforo == Semaforo.SEM_LEITURA }
     val semSinal = itens.count { it.semaforo == Semaforo.SEM_SINAL }
+    // A leitura não veio e não há anterior para mostrar: não dá para dizer que está tudo bem.
+    val semResposta = itens.count { it.erroDaLeitura != null && it.ultimaLeitura == null }
 
     val (estado, titulo) = when {
         vermelhos > 0 -> Semaforo.VERMELHO to if (vermelhos == 1) "1 equipamento fora da faixa" else "$vermelhos equipamentos fora da faixa"
         amarelos > 0 -> Semaforo.AMARELO to if (amarelos == 1) "1 equipamento pede atenção" else "$amarelos equipamentos pedem atenção"
         // Sensor parado nunca entra em "tudo dentro da faixa": não se sabe como ele está.
         semSinal > 0 -> Semaforo.SEM_SINAL to if (semSinal == 1) "1 equipamento sem sinal" else "$semSinal equipamentos sem sinal"
+        semResposta > 0 -> Semaforo.SEM_SINAL to if (semResposta == 1) "1 equipamento sem resposta" else "$semResposta equipamentos sem resposta"
         semLeitura == itens.size -> Semaforo.SEM_LEITURA to "Nenhum equipamento enviou leitura"
         else -> Semaforo.VERDE to "Tudo dentro da faixa"
     }
@@ -325,7 +328,9 @@ private fun CartaoDoEquipamento(item: EquipamentoNoPainel, agora: Instant, aoAbr
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    if (leitura == null) {
+                    if (leitura == null && item.erroDaLeitura != null) {
+                        "Não foi possível buscar a leitura agora"
+                    } else if (leitura == null) {
                         "Nenhuma leitura nos últimos 7 dias"
                     } else {
                         // O horário é o do dado (registradaEm), nunca o de quando a tela abriu.

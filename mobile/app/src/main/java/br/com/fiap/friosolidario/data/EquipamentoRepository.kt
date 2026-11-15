@@ -19,6 +19,8 @@ data class EquipamentoNoPainel(
     val equipamento: EquipamentoDto,
     val ultimaLeitura: LeituraDto?,
     val semaforo: Semaforo,
+    /** A busca da leitura falhou: "sem leitura" aqui é falta de resposta, não equipamento sem dado. */
+    val erroDaLeitura: ErroApp? = null,
 )
 
 class EquipamentoRepository(
@@ -30,7 +32,8 @@ class EquipamentoRepository(
     /**
      * Equipamentos ativos com a última leitura de cada um. A lista da API não traz leitura, então
      * a série de cada equipamento é buscada em paralelo. Uma série que falha deixa só aquele
-     * equipamento "sem leitura"; se nenhuma responde, o painel mostra o erro em vez de tudo cinza.
+     * equipamento sem leitura e marcado com o erro (quem mostra decide se mantém a leitura anterior);
+     * se nenhuma responde, o painel mostra o erro em vez de tudo cinza.
      */
     suspend fun painel(): Resultado<List<EquipamentoNoPainel>> {
         val equipamentos = when (val lista = chamar(aoExpirar) { api.equipamentos(ativo = true) }) {
@@ -50,7 +53,12 @@ class EquipamentoRepository(
         return Resultado.Ok(
             equipamentos.zip(ultimas) { equipamento, ultima ->
                 val leitura = (ultima as? Resultado.Ok)?.valor
-                EquipamentoNoPainel(equipamento, leitura, semaforo(equipamento, leitura, agora()))
+                EquipamentoNoPainel(
+                    equipamento,
+                    leitura,
+                    semaforo(equipamento, leitura, agora()),
+                    erroDaLeitura = (ultima as? Resultado.Falha)?.erro,
+                )
             },
         )
     }

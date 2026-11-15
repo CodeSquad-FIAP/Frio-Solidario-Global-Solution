@@ -99,6 +99,20 @@ class EquipamentoRepositoryTest {
     }
 
     @Test
+    fun `serie que falhou vem marcada para nao ser confundida com equipamento sem leitura`() = runTest {
+        servidor.rotas(
+            "/api/equipamentos?ativo=true" to json("[${equipamentoJson(1)},${equipamentoJson(2)}]"),
+            "/api/equipamentos/1/leituras?periodo=24h" to MockResponse().setResponseCode(500),
+            "/api/equipamentos/2/leituras?periodo=24h" to json("[${leituraJson(20, 2, 2.0, "2026-11-15T10:05:00+00:00")}]"),
+        )
+
+        val painel = repositorio.painel().valor()
+
+        assertTrue(painel[0].erroDaLeitura != null)
+        assertNull(painel[1].erroDaLeitura)
+    }
+
+    @Test
     fun `se nenhuma serie responde o painel mostra o erro em vez de tudo cinza`() = runTest {
         servidor.rotas(
             "/api/equipamentos?ativo=true" to json("[${equipamentoJson(1)},${equipamentoJson(2)}]"),

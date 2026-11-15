@@ -8,6 +8,7 @@ import br.com.fiap.friosolidario.data.AuthRepository
 import br.com.fiap.friosolidario.data.EquipamentoNoPainel
 import br.com.fiap.friosolidario.data.EquipamentoRepository
 import br.com.fiap.friosolidario.dominio.Semaforo
+import br.com.fiap.friosolidario.dominio.semaforo
 import br.com.fiap.friosolidario.ui.comum.EstadoTela
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,13 +21,14 @@ data class PainelEstado(
     val tela: EstadoTela<List<EquipamentoNoPainel>> = EstadoTela.Carregando,
     /** Puxar-para-atualizar em andamento. */
     val atualizando: Boolean = false,
-    /** A atualização falhou, mas a lista anterior continua na tela. */
+    /** A atualização falhou, no todo ou na leitura de algum equipamento; o que já se sabia continua na tela. */
     val erroAoAtualizar: ErroApp? = null,
 )
 
 class PainelViewModel(
     private val equipamentos: EquipamentoRepository,
     private val auth: AuthRepository,
+    private val agora: () -> java.time.Instant = java.time.Instant::now,
 ) : ViewModel() {
 
     private val _estado = MutableStateFlow(PainelEstado())
@@ -61,7 +63,13 @@ class PainelViewModel(
             val resultado = equipamentos.painel()
             _estado.update { atual ->
                 when (resultado) {
-                    is Resultado.Ok -> PainelEstado(tela = EstadoTela.Conteudo(resultado.valor.sortedWith(MAIS_GRAVE_PRIMEIRO)))
+                    is Resultado.Ok -> {
+                        val itens = comLeiturasAnteriores(resultado.valor, atual.tela)
+                        PainelEstado(
+                            tela = EstadoTela.Conteudo(itens.sortedWith(MAIS_GRAVE_PRIMEIRO)),
+                            erroAoAtualizar = itens.firstNotNullOfOrNull { it.erroDaLeitura },
+                        )
+                    }
 
                     is Resultado.Falha ->
                         if (atual.tela is EstadoTela.Conteudo) {
@@ -70,6 +78,28 @@ class PainelViewModel(
                             PainelEstado(tela = EstadoTela.Erro(resultado.erro))
                         }
                 }
+            }
+        }
+    }
+
+    /**
+     * Quando a leitura de um equipamento não veio, fica valendo a última que a tela já tinha. Trocar
+     * por "sem leitura" esconderia um equipamento fora da faixa atrás de um "tudo dentro da faixa".
+     */
+    private fun comLeiturasAnteriores(
+        novos: List<EquipamentoNoPainel>,
+        telaAtual: EstadoTela<List<EquipamentoNoPainel>>,
+    ): List<EquipamentoNoPainel> {
+        val anteriores = (telaAtual as? EstadoTela.Conteudo)?.valor.orEmpty().associateBy { it.equipamento.id }
+        return novos.map { novo ->
+            val leituraAnterior = anteriores[novo.equipamento.id]?.ultimaLeitura
+            if (novo.erroDaLeitura == null || leituraAnterior == null) {
+                novo
+            } else {
+                novo.copy(
+                    ultimaLeitura = leituraAnterior,
+                    semaforo = semaforo(novo.equipamento, leituraAnterior, agora()),
+                )
             }
         }
     }
