@@ -12,6 +12,9 @@ import br.com.fiap.friosolidario.dominio.paraDecimal
 import br.com.fiap.friosolidario.dominio.validarLote
 import br.com.fiap.friosolidario.ui.comum.EstadoTela
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,13 +30,15 @@ data class LotesEstado(
     val atualizando: Boolean = false,
     val erroAoAtualizar: ErroApp? = null,
     val saida: Saida? = null,
-    val aviso: String? = null,
 )
 
 class LotesViewModel(private val lotes: LoteRepository) : ViewModel() {
 
     private val _estado = MutableStateFlow(LotesEstado())
     val estado: StateFlow<LotesEstado> = _estado.asStateFlow()
+
+    private val _avisos = Channel<String>(Channel.BUFFERED)
+    val avisos: Flow<String> = _avisos.receiveAsFlow()
 
     private var carga: Job? = null
 
@@ -60,32 +65,35 @@ class LotesViewModel(private val lotes: LoteRepository) : ViewModel() {
         _estado.update { it.copy(saida = null) }
     }
 
-    fun avisoVisto() = _estado.update { it.copy(aviso = null) }
-
     fun confirmarSaida() {
         val saida = _estado.value.saida ?: return
         if (saida.enviando) return
         _estado.update { it.copy(saida = saida.copy(enviando = true, erro = null)) }
+        // Uma listagem que saiu antes da retirada traria o lote ainda disponível.
+        carga?.cancel()
 
         viewModelScope.launch {
             when (val resultado = lotes.registrarSaida(saida.lote.id, saida.status)) {
-                is Resultado.Ok -> _estado.update { atual ->
-                    val tela = atual.tela
-                    atual.copy(
-                        saida = null,
-                        aviso = "Lote marcado como ${saida.status.rotulo.lowercase()}.",
-                        tela = if (tela is EstadoTela.Conteudo) {
-                            EstadoTela.Conteudo(tela.valor.map { if (it.id == resultado.valor.id) resultado.valor else it })
-                        } else {
-                            tela
-                        },
-                    )
+                is Resultado.Ok -> {
+                    _estado.update { atual ->
+                        val tela = atual.tela
+                        atual.copy(
+                            saida = null,
+                            tela = if (tela is EstadoTela.Conteudo) {
+                                EstadoTela.Conteudo(tela.valor.map { if (it.id == resultado.valor.id) resultado.valor else it })
+                            } else {
+                                tela
+                            },
+                        )
+                    }
+                    _avisos.send("Lote marcado como ${saida.status.rotulo.lowercase()}.")
                 }
 
                 is Resultado.Falha ->
                     if (resultado.erro is ErroApp.Conflito) {
                         // Outra pessoa já registrou a saída: mostra o estado atual.
-                        _estado.update { it.copy(saida = null, aviso = "Este lote já tinha saído do estoque.") }
+                        _estado.update { it.copy(saida = null) }
+                        _avisos.send("Este lote já tinha saído do estoque.")
                         buscar()
                     } else {
                         _estado.update { it.copy(saida = it.saida?.copy(enviando = false, erro = resultado.erro)) }
@@ -118,6 +126,8 @@ data class LoteFormEstado(
     val categoria: String = "",
     val kg: String = "",
     val validade: LocalDate? = null,
+    /** Categorias já usadas nos lotes da instituição, vindas da API, como atalho de digitação. */
+    val categoriasSugeridas: List<String> = emptyList(),
     val erros: Map<Campo, String> = emptyMap(),
     val enviando: Boolean = false,
     val erro: ErroApp? = null,
@@ -128,6 +138,19 @@ class LoteFormViewModel(private val lotes: LoteRepository) : ViewModel() {
 
     private val _estado = MutableStateFlow(LoteFormEstado())
     val estado: StateFlow<LoteFormEstado> = _estado.asStateFlow()
+
+    init {
+        // Só um atalho: se a listagem falhar, o campo de categoria continua livre para digitar.
+        viewModelScope.launch {
+            val existentes = (lotes.listar() as? Resultado.Ok)?.valor ?: return@launch
+            val categorias = existentes
+                .map { it.categoria.trim().lowercase().replaceFirstChar(Char::titlecase) }
+                .filter { it.isNotEmpty() }
+                .distinct()
+                .sorted()
+            _estado.update { it.copy(categoriasSugeridas = categorias) }
+        }
+    }
 
     fun mudarDescricao(valor: String) = mudar(Campo.DESCRICAO) { it.copy(descricao = valor) }
     fun mudarCategoria(valor: String) = mudar(Campo.CATEGORIA) { it.copy(categoria = valor) }

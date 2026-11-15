@@ -10,6 +10,9 @@ import br.com.fiap.friosolidario.data.AlertaRepository
 import br.com.fiap.friosolidario.ui.comum.EstadoTela
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,14 +37,17 @@ data class AlertasEstado(
     val atualizando: Boolean = false,
     val erroAoAtualizar: ErroApp? = null,
     val resolucao: Resolucao? = null,
-    /** Aviso curto depois de resolver ("Alerta resolvido: transferi o lote"). */
-    val aviso: String? = null,
 )
 
 class AlertasViewModel(private val alertas: AlertaRepository) : ViewModel() {
 
     private val _estado = MutableStateFlow(AlertasEstado())
     val estado: StateFlow<AlertasEstado> = _estado.asStateFlow()
+
+    // Avisos curtos ("Alerta resolvido: transferi o lote"). Canal, e não campo do estado: a tela
+    // mostra cada um até o fim, sem que apagar o campo cancele o aviso que acabou de abrir.
+    private val _avisos = Channel<String>(Channel.BUFFERED)
+    val avisos: Flow<String> = _avisos.receiveAsFlow()
 
     private var carga: Job? = null
 
@@ -73,14 +79,14 @@ class AlertasViewModel(private val alertas: AlertaRepository) : ViewModel() {
         _estado.update { it.copy(resolucao = null) }
     }
 
-    fun avisoVisto() = _estado.update { it.copy(aviso = null) }
-
     fun confirmarResolucao() {
         val resolucao = _estado.value.resolucao ?: return
         val acao = resolucao.acao ?: return
         if (resolucao.enviando) return
 
         _estado.update { it.copy(resolucao = resolucao.copy(enviando = true, erro = null)) }
+        // Uma consulta que saiu antes da resolução traria o alerta ainda aberto e o devolveria à fila.
+        carga?.cancel()
         viewModelScope.launch {
             when (val resultado = alertas.resolver(resolucao.alerta.id, acao)) {
                 is Resultado.Ok -> {
@@ -88,7 +94,6 @@ class AlertasViewModel(private val alertas: AlertaRepository) : ViewModel() {
                     _estado.update { atual ->
                         atual.copy(
                             resolucao = null,
-                            aviso = "Alerta resolvido: ${acao.rotulo.lowercase()}",
                             tela = atual.tela.comListas { listas ->
                                 Listas(
                                     abertos = listas.abertos.filterNot { it.id == resultado.valor.id },
@@ -97,12 +102,14 @@ class AlertasViewModel(private val alertas: AlertaRepository) : ViewModel() {
                             },
                         )
                     }
+                    _avisos.send("Alerta resolvido: ${acao.rotulo.lowercase()}")
                 }
 
                 is Resultado.Falha ->
                     if (resultado.erro is ErroApp.Conflito || resultado.erro == ErroApp.NaoEncontrado) {
                         // Outra pessoa resolveu antes: fecha o diálogo e mostra a fila como está agora.
-                        _estado.update { it.copy(resolucao = null, aviso = "Este alerta já tinha sido resolvido.") }
+                        _estado.update { it.copy(resolucao = null) }
+                        _avisos.send("Este alerta já tinha sido resolvido.")
                         buscar()
                     } else {
                         _estado.update { it.copy(resolucao = it.resolucao?.copy(enviando = false, erro = resultado.erro)) }

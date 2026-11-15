@@ -40,9 +40,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 
-/** Atalhos de digitação; a categoria é texto livre na API. */
-private val CATEGORIAS_COMUNS = listOf("Hortifruti", "Frutas", "Proteínas", "Laticínios", "Padaria", "Congelados")
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun LoteFormScreen(aoVoltar: () -> Unit, aoSalvar: () -> Unit) {
@@ -75,13 +72,17 @@ fun LoteFormScreen(aoVoltar: () -> Unit, aoSalvar: () -> Unit) {
             erro = estado.erros[Campo.CATEGORIA],
             habilitado = !estado.enviando,
         )
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CATEGORIAS_COMUNS.forEach { categoria ->
-                SuggestionChip(
-                    onClick = { viewModel.mudarCategoria(categoria) },
-                    label = { Text(categoria) },
-                    enabled = !estado.enviando,
-                )
+        // Atalhos com as categorias que a instituição já usou (vêm de GET /api/lotes); a
+        // categoria é texto livre na API, então o campo acima aceita qualquer outra.
+        if (estado.categoriasSugeridas.isNotEmpty()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                estado.categoriasSugeridas.forEach { categoria ->
+                    SuggestionChip(
+                        onClick = { viewModel.mudarCategoria(categoria) },
+                        label = { Text(categoria) },
+                        enabled = !estado.enviando,
+                    )
+                }
             }
         }
         CampoDeTexto(

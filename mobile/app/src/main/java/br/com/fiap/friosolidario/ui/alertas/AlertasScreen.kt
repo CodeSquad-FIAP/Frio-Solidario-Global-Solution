@@ -90,11 +90,8 @@ fun AlertasScreen(aoVoltar: () -> Unit, aoAbrirEquipamento: (Long) -> Unit) {
 
     EnquantoVisivel(INTERVALO_DOS_ALERTAS_MS) { viewModel.atualizarEmSilencio() }
 
-    LaunchedEffect(estado.aviso) {
-        estado.aviso?.let {
-            viewModel.avisoVisto()
-            avisos.showSnackbar(it)
-        }
+    LaunchedEffect(viewModel) {
+        viewModel.avisos.collect { avisos.showSnackbar(it) }
     }
 
     val listas = (estado.tela as? EstadoTela.Conteudo)?.valor

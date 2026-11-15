@@ -80,11 +80,8 @@ fun LotesScreen(sessao: Sessao, aoVoltar: () -> Unit, aoNovoLote: () -> Unit) {
         onPauseOrDispose { }
     }
 
-    LaunchedEffect(estado.aviso) {
-        estado.aviso?.let {
-            viewModel.avisoVisto()
-            avisos.showSnackbar(it)
-        }
+    LaunchedEffect(viewModel) {
+        viewModel.avisos.collect { avisos.showSnackbar(it) }
     }
 
     Scaffold(

@@ -54,14 +54,24 @@ O que **não** foi exercitado por esta execução, e precisa de uma passada do g
 | 21 | Token recusado (401) com o app aberto | Volta ao login com "Sua sessão expirou. Entre de novo." | `40-token-expirado-volta-ao-login.png` |
 | 22 | Banco sem equipamentos, alertas e lotes | "Nenhum equipamento cadastrado", "Nenhum alerta aberto", "Nenhum lote doado registrado" | `30-`, `31-`, `32-banco-vazio-*.png` |
 | 23 | Tela de 640 × 360 dp com fonte 1,3× | Nenhum texto cortado no painel e no detalhe | `10-`, `11-tela-pequena-fonte-grande-*.png` |
-| 24 | Dados fixos no código | `grep` por nomes, e-mails e listas literais em `mobile/app/src/main`: nenhum resultado | — |
+| 24 | Dados fixos no código | `grep` por nomes de equipamento, e-mails, temperaturas e `listOf("` em `mobile/app/src/main`: nenhum resultado. As sugestões de categoria do lote vêm das categorias já usadas em `GET /api/lotes`; os únicos textos fixos são rótulos de tela e os vocabulários da API (tipos, severidades, ações) | — |
 
 Em nenhum dos cenários de 14 a 22 o app fechou: o processo continuou o mesmo e o `logcat` não
 registrou `FATAL EXCEPTION`.
 
 ## Testes automatizados do app
 
-`cd mobile && ./gradlew testDebugUnitTest` — **95 testes**, sem aparelho e sem API: mapeamento de erro
-por status e por falha de rede, login, semáforo, escala do gráfico, validação dos formulários e os
+`cd mobile && ./gradlew testDebugUnitTest` — **111 testes**, sem aparelho e sem API: mapeamento de erro
+por status e por falha de rede, login, semáforo, escala do gráfico, validação dos formulários, os
 repositórios contra um servidor HTTP de teste (MockWebServer), incluindo token vencido e download de
-PDF interrompido.
+PDF interrompido, e os ViewModels de alertas, detalhe e lotes.
+
+## Depois da revisão da branch
+
+Uma revisão independente do código, feita depois do roteiro acima, levou a cinco correções (cada uma
+com teste): o aviso de confirmação ("Alerta resolvido…") era cancelado antes de aparecer; uma leitura
+antiga deixava o cartão verde — agora, com mais de 30 minutos sem leitura, o equipamento aparece como
+"Sem sinal"; as sugestões de categoria do lote eram uma lista fixa e passaram a vir da API; o "Tentar
+de novo" da faixa de erro do detalhe não chamava a API; e uma atualização em andamento podia devolver à
+fila, por alguns segundos, um alerta recém-resolvido. As capturas de 1 a 23 são anteriores a essas
+correções; o aviso e o "Sem sinal" foram conferidos de novo no aparelho (`50-` e `51-`).

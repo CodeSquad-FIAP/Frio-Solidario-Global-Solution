@@ -23,7 +23,11 @@ class EquipamentoRepositoryTest {
     @Before
     fun preparar() {
         servidor.start()
-        repositorio = EquipamentoRepository(servidor.api(), aoExpirar = { expiracoes++ })
+        repositorio = EquipamentoRepository(
+            servidor.api(),
+            aoExpirar = { expiracoes++ },
+            agora = { Instant.parse("2026-11-15T10:15:00Z") },
+        )
     }
 
     @After
@@ -63,7 +67,7 @@ class EquipamentoRepositoryTest {
         val item = repositorio.painel().valor().single()
 
         assertEquals(Instant.parse("2026-11-12T08:00:00Z"), item.ultimaLeitura!!.registradaEm)
-        assertEquals(Semaforo.VERDE, item.semaforo)
+        assertEquals("a leitura de 3 dias atrás aparece, mas não como verde", Semaforo.SEM_SINAL, item.semaforo)
     }
 
     @Test

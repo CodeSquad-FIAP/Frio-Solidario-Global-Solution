@@ -12,8 +12,16 @@ class SemaforoTest {
     private fun equipamento(min: Double, max: Double, umidMax: Double = 85.0) =
         EquipamentoDto(1, 1, "Banco", "Geladeira", TipoEquipamento.GELADEIRA, min, max, umidMax)
 
-    private fun leitura(temperatura: Double, umidade: Double = 70.0, porta: Boolean = false) =
-        LeituraDto(1, 1, temperatura, umidade, porta, Instant.parse("2026-11-15T12:00:00Z"))
+    private val agora = Instant.parse("2026-11-15T12:05:00Z")
+
+    private fun leitura(
+        temperatura: Double,
+        umidade: Double = 70.0,
+        porta: Boolean = false,
+        em: Instant = Instant.parse("2026-11-15T12:00:00Z"),
+    ) = LeituraDto(1, 1, temperatura, umidade, porta, em)
+
+    private fun semaforo(equipamento: EquipamentoDto, ultima: LeituraDto?) = semaforo(equipamento, ultima, agora)
 
     private val geladeira = equipamento(2.0, 8.0) // largura 6 -> margem de atenção 0,6
 
@@ -76,5 +84,29 @@ class SemaforoTest {
         assertEquals(Semaforo.VERDE, semaforo(estreita, leitura(-18.5)))
         assertEquals(Semaforo.AMARELO, semaforo(estreita, leitura(-18.2)))
         assertEquals(Semaforo.VERMELHO, semaforo(estreita, leitura(-17.9)))
+    }
+
+    @Test
+    fun `sensor parado ha mais de meia hora nao fica verde`() {
+        val boaMasVelha = leitura(5.0, em = agora.minusSeconds(31 * 60))
+        assertEquals(Semaforo.SEM_SINAL, semaforo(geladeira, boaMasVelha))
+
+        val tresDias = leitura(5.0, em = agora.minusSeconds(3 * 86400L))
+        assertEquals(Semaforo.SEM_SINAL, semaforo(geladeira, tresDias))
+    }
+
+    @Test
+    fun `leitura de ate meia hora ainda vale`() {
+        assertEquals(Semaforo.VERDE, semaforo(geladeira, leitura(5.0, em = agora.minusSeconds(30 * 60))))
+    }
+
+    @Test
+    fun `sem sinal vence ate a ultima leitura fora da faixa, que ja nao diz como esta agora`() {
+        assertEquals(Semaforo.SEM_SINAL, semaforo(geladeira, leitura(9.0, em = agora.minusSeconds(2 * 3600))))
+    }
+
+    @Test
+    fun `relogio do sensor adiantado nao vira sem sinal`() {
+        assertEquals(Semaforo.VERDE, semaforo(geladeira, leitura(5.0, em = agora.plusSeconds(120))))
     }
 }

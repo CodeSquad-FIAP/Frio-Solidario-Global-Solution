@@ -8,7 +8,16 @@ enum class Semaforo(val rotulo: String) {
     AMARELO("Atenção"),
     VERMELHO("Fora da faixa"),
     SEM_LEITURA("Sem leitura"),
+
+    /** Há leitura, mas velha demais para dizer como o equipamento está agora. */
+    SEM_SINAL("Sem sinal"),
 }
+
+/**
+ * Depois disso sem leitura nova, o sensor é dado como parado. O contrato do sensor publica a cada
+ * 2 minutos; meia hora cobre queda de rede e reinício sem alarmar à toa.
+ */
+val LIMITE_SEM_SINAL: java.time.Duration = java.time.Duration.ofMinutes(30)
 
 /**
  * Cor do equipamento pela última leitura contra a faixa **dele** (`tempMin`..`tempMax`): 5 °C é
@@ -17,10 +26,13 @@ enum class Semaforo(val rotulo: String) {
  * - vermelho: temperatura fora da faixa (é o que a regra da API transforma em alerta);
  * - amarelo: ainda dentro, mas encostando em um limite, com umidade acima do máximo ou com a
  *   porta aberta — o momento de agir antes de virar alerta;
- * - verde: o resto.
+ * - verde: o resto;
+ * - sem sinal: a última leitura é antiga ([LIMITE_SEM_SINAL]). Vale mais que a cor dela: um
+ *   sensor que parou há três dias com 3 °C não prova que a geladeira está fria hoje.
  */
-fun semaforo(equipamento: EquipamentoDto, ultima: LeituraDto?): Semaforo {
+fun semaforo(equipamento: EquipamentoDto, ultima: LeituraDto?, agora: java.time.Instant = java.time.Instant.now()): Semaforo {
     if (ultima == null) return Semaforo.SEM_LEITURA
+    if (java.time.Duration.between(ultima.registradaEm, agora) > LIMITE_SEM_SINAL) return Semaforo.SEM_SINAL
     if (foraDaFaixa(ultima, equipamento)) return Semaforo.VERMELHO
 
     val margem = margemDeAtencao(equipamento)

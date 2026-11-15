@@ -81,8 +81,9 @@ class PainelViewModel(
                 when (it.semaforo) {
                     Semaforo.VERMELHO -> 0
                     Semaforo.AMARELO -> 1
-                    Semaforo.SEM_LEITURA -> 2
-                    Semaforo.VERDE -> 3
+                    Semaforo.SEM_SINAL -> 2
+                    Semaforo.SEM_LEITURA -> 3
+                    Semaforo.VERDE -> 4
                 }
             },
             { it.equipamento.nome.lowercase() },

@@ -21,7 +21,11 @@ data class EquipamentoNoPainel(
     val semaforo: Semaforo,
 )
 
-class EquipamentoRepository(private val api: FrioApi, private val aoExpirar: suspend () -> Unit) {
+class EquipamentoRepository(
+    private val api: FrioApi,
+    private val aoExpirar: suspend () -> Unit,
+    private val agora: () -> java.time.Instant = java.time.Instant::now,
+) {
 
     /**
      * Equipamentos ativos com a última leitura de cada um. A lista da API não traz leitura, então
@@ -46,7 +50,7 @@ class EquipamentoRepository(private val api: FrioApi, private val aoExpirar: sus
         return Resultado.Ok(
             equipamentos.zip(ultimas) { equipamento, ultima ->
                 val leitura = (ultima as? Resultado.Ok)?.valor
-                EquipamentoNoPainel(equipamento, leitura, semaforo(equipamento, leitura))
+                EquipamentoNoPainel(equipamento, leitura, semaforo(equipamento, leitura, agora()))
             },
         )
     }

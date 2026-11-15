@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.SensorsOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,7 +33,7 @@ fun Semaforo.cores(): CorDeEstado = with(LocalCoresDeEstado.current) {
         Semaforo.VERDE -> ok
         Semaforo.AMARELO -> atencao
         Semaforo.VERMELHO -> critico
-        Semaforo.SEM_LEITURA -> neutro
+        Semaforo.SEM_LEITURA, Semaforo.SEM_SINAL -> neutro
     }
 }
 
@@ -43,6 +44,7 @@ val Semaforo.icone: ImageVector
         Semaforo.AMARELO -> Icons.Filled.Warning
         Semaforo.VERMELHO -> Icons.Filled.Error
         Semaforo.SEM_LEITURA -> Icons.Outlined.HelpOutline
+        Semaforo.SEM_SINAL -> Icons.Outlined.SensorsOff
     }
 
 /** Etiqueta colorida com ícone e texto, usada para o semáforo e para a severidade do alerta. */

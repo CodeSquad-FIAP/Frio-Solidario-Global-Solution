@@ -77,7 +77,18 @@ class DetalheViewModel(
         recarregarSerie(periodo, silencioso = false)
     }
 
-    fun tentarSerieDeNovo() = mudarPeriodo(_estado.value.periodo)
+    /**
+     * "Tentar de novo" da série. Com o gráfico na tela (a atualização periódica é que falhou) busca
+     * sem apagar o que está visível; com a série em erro, volta ao indicador de carregamento.
+     */
+    fun tentarSerieDeNovo() {
+        val atual = _estado.value
+        if (atual.serie is EstadoTela.Conteudo) {
+            recarregarSerie(atual.periodo, silencioso = true)
+        } else {
+            mudarPeriodo(atual.periodo)
+        }
+    }
 
     /** Atualização periódica: leitura nova do sensor entra no gráfico sem a tela piscar. */
     fun atualizarEmSilencio() {

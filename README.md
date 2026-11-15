@@ -340,16 +340,18 @@ do relatório, todas lendo e gravando pela API — não há dado fixo no app:
 
 O semáforo usa a faixa **do próprio equipamento**: vermelho com a temperatura fora de `tempMin`..`tempMax`;
 amarelo dentro da faixa mas encostando em um limite (10% da largura da faixa, entre 0,5 °C e um quarto
-dela), com umidade acima de `umidMax` ou com a porta aberta; verde no resto; cinza sem leitura. A regra
+dela), com umidade acima de `umidMax` ou com a porta aberta; verde no resto; cinza sem leitura. Se a
+última leitura tem mais de 30 minutos o cartão vira "Sem sinal", seja qual for a temperatura dela: sensor
+parado não prova que o equipamento está frio, e o painel deixa de dizer "tudo dentro da faixa". A regra
 está em `mobile/app/src/main/java/br/com/fiap/friosolidario/dominio/Semaforo.kt`.
 
 ```bash
 cd mobile
-./gradlew testDebugUnitTest      # 95 testes, sem aparelho e sem API
+./gradlew testDebugUnitTest      # 111 testes, sem aparelho e sem API
 ./gradlew installDebug           # instala no emulador ou no aparelho conectado
 ```
 
-Precisa do Android SDK (plataforma 36) e de um JDK 17; abrir a pasta `mobile/` no Android Studio também
+Precisa do Android SDK (plataforma 36) e de um JDK 17 ou mais novo; abrir a pasta `mobile/` no Android Studio também
 funciona. A URL da API fica em **um lugar só**, `frio.apiUrl` em `mobile/gradle.properties` (o código lê
 por `core/ApiConfig.kt`). O padrão é o do emulador, `http://10.0.2.2:5199/`; para aparelho no USB:
 
@@ -378,7 +380,7 @@ capturas e o roteiro executado estão em `docs/evidencias/app-mobile.md`.
 | Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **60 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
 | Lotes doados | pronto — `/api/lotes` (lista, busca, cadastro e retirada), sempre na instituição do token; alimenta os indicadores de kg doados e perda |
-| App mobile | pronto — 5 telas + relatório em PDF integrados à API, em `mobile/`; 95 testes unitários; ver "App mobile (Kevin)" e `docs/evidencias/app-mobile.md` |
+| App mobile | pronto — 5 telas + relatório em PDF integrados à API, em `mobile/`; 111 testes unitários; ver "App mobile (Kevin)" e `docs/evidencias/app-mobile.md` |
 | Ação tomada na resolução do alerta | pronto — corpo opcional em `PATCH /api/alertas/{id}/resolver`, coluna `alerta.acao_tomada`; banco já carregado precisa de `db/migracoes/2026-11-15-alerta-acao-tomada.sql` |
 | IoT (MQTT) | ponte pronta na API (tópico `frio/equipamentos/{id}/leitura`, ver "Ponte MQTT"); falta só o script do sensor publicando, do Roger |
 

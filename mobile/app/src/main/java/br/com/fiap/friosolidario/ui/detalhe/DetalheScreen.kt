@@ -205,7 +205,7 @@ private fun Moldura(conteudo: @Composable () -> Unit) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Cabecalho(equipamento: EquipamentoDto, ultima: LeituraDto?, agora: Instant) {
-    val estado = semaforo(equipamento, ultima)
+    val estado = semaforo(equipamento, ultima, agora)
     val cores = estado.cores()
     Column(
         Modifier

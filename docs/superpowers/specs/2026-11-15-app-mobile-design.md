@@ -50,7 +50,7 @@ tratamento de erro de conexão.
 | URL da API | Um único ponto: `core/ApiConfig.kt`, alimentado por `frio.apiUrl` em `mobile/gradle.properties` (padrão `http://10.0.2.2:5199/`) |
 | Sessão | Token, validade, nome, papel e instituição em DataStore; logout limpa tudo |
 | Erros | Um tipo comum (`ErroApp`) e um componente comum (mensagem + "Tentar de novo") nas 5 telas; `detail` do ProblemDetails é a mensagem de 400/409 |
-| Semáforo | Vermelho: temperatura fora de `tempMin..tempMax`. Amarelo: dentro da faixa mas a menos de 10% da largura da faixa (mínimo 0,5 °C, máximo um quarto da faixa) de um limite, ou umidade acima de `umidMax`, ou porta aberta. Verde: o resto. Cinza: sem leitura |
+| Semáforo | Vermelho: temperatura fora de `tempMin..tempMax`. Amarelo: dentro da faixa mas a menos de 10% da largura da faixa (mínimo 0,5 °C, máximo um quarto da faixa) de um limite, ou umidade acima de `umidMax`, ou porta aberta. Verde: o resto. Cinza: sem leitura. "Sem sinal" (acrescentado na revisão): última leitura com mais de 30 minutos, seja qual for a temperatura |
 | Última leitura | A lista de equipamentos da API não traz leitura; o app busca a série de 24h de cada equipamento (7d se vier vazia) e usa a última. Sem mudança na API |
 | Gráfico | Desenhado em Canvas do Compose (linha da série, limites tracejados, pontos fora da faixa em vermelho); sem biblioteca de gráfico |
 | Alertas | Abas "Abertos" e "Histórico"; atualização automática a cada 10 s; resolver abre diálogo com a ação tomada |

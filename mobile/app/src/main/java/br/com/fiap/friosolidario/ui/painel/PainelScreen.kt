@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.com.fiap.friosolidario.core.Sessao
 import br.com.fiap.friosolidario.core.ehAdmin
+import br.com.fiap.friosolidario.core.diaEHora
 import br.com.fiap.friosolidario.core.hora
 import br.com.fiap.friosolidario.core.temperatura
 import br.com.fiap.friosolidario.core.tempoDecorrido
@@ -244,15 +245,19 @@ private fun Resumo(itens: List<EquipamentoNoPainel>) {
     val vermelhos = itens.count { it.semaforo == Semaforo.VERMELHO }
     val amarelos = itens.count { it.semaforo == Semaforo.AMARELO }
     val semLeitura = itens.count { it.semaforo == Semaforo.SEM_LEITURA }
+    val semSinal = itens.count { it.semaforo == Semaforo.SEM_SINAL }
 
     val (estado, titulo) = when {
         vermelhos > 0 -> Semaforo.VERMELHO to if (vermelhos == 1) "1 equipamento fora da faixa" else "$vermelhos equipamentos fora da faixa"
         amarelos > 0 -> Semaforo.AMARELO to if (amarelos == 1) "1 equipamento pede atenção" else "$amarelos equipamentos pedem atenção"
+        // Sensor parado nunca entra em "tudo dentro da faixa": não se sabe como ele está.
+        semSinal > 0 -> Semaforo.SEM_SINAL to if (semSinal == 1) "1 equipamento sem sinal" else "$semSinal equipamentos sem sinal"
         semLeitura == itens.size -> Semaforo.SEM_LEITURA to "Nenhum equipamento enviou leitura"
         else -> Semaforo.VERDE to "Tudo dentro da faixa"
     }
     val detalhes = buildList {
         if (vermelhos > 0 && amarelos > 0) add(if (amarelos == 1) "1 em atenção" else "$amarelos em atenção")
+        if (semSinal > 0 && (vermelhos > 0 || amarelos > 0)) add("$semSinal sem sinal")
         if (semLeitura in 1 until itens.size) add("$semLeitura sem leitura")
         add(if (itens.size == 1) "1 equipamento monitorado" else "${itens.size} equipamentos monitorados")
     }
@@ -325,7 +330,9 @@ private fun CartaoDoEquipamento(item: EquipamentoNoPainel, agora: Instant, aoAbr
                     } else {
                         // O horário é o do dado (registradaEm), nunca o de quando a tela abriu.
                         buildString {
-                            append("Última leitura ${tempoDecorrido(leitura.registradaEm, agora)} · ${hora(leitura.registradaEm)}")
+                            // Leitura de outro dia leva a data: "14:32" sozinho pareceria de hoje.
+                            val quando = if (item.semaforo == Semaforo.SEM_SINAL) diaEHora(leitura.registradaEm) else hora(leitura.registradaEm)
+                            append("Última leitura ${tempoDecorrido(leitura.registradaEm, agora)} · $quando")
                             append(" · umidade ${umidade(leitura.umidade)}")
                             if (leitura.portaAberta) append(" · porta aberta")
                         }
