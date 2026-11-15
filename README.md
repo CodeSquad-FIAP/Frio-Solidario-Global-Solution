@@ -307,6 +307,82 @@ Configuração (`appsettings.json`, seção `Mqtt`): `Habilitado`, `Host`, `Port
 `ClienteId`, `Usuario`, `Senha`. Tudo trocável por ambiente (`Mqtt__Host=...`). Com
 `Habilitado=false` nenhum socket é aberto — `dotnet run` e `dotnet test` continuam sem broker.
 
+### Simulação vs. hardware físico
+
+O script `simulacao/sensor.py` substitui o microcontrolador **na demo**, publicando no **mesmo** tópico,
+payload e QoS 1 que o hardware físico usaria em produção. A ponte não distingue os dois: qualquer
+mensagem MQTT é persistida com `origem = SENSOR` (o campo `origem` do payload é ignorado pela ponte,
+que fixa `OrigemLeitura.SENSOR`). Ou seja, leituras simuladas aparecem como `SENSOR` no banco —
+transparência importante para a banca.
+
+| | **Simulado (demo)** | **Hardware físico (produção)** |
+|---|---|---|
+| Sensor temp/umidade | Script Python gerando valores | **DHT22** (-40 a 80 °C, ±0,5 °C; 0 a 100% UR) |
+| Sensor de porta | Campo `portaAberta` alternado pelo script | **Reed Switch** magnético |
+| Microcontrolador | Processo local (`paho-mqtt`) | **ESP32** (Wi-Fi + MQTT) |
+| Publicação | `paho-mqtt` → broker local | MQTT QoS 1 → broker |
+| Queda de internet | Não se aplica (broker local) | Buffer circular em memória flash/NVS; reenvio na reconexão |
+
+**DHT22:** mede temperatura (-40 a 80 °C, precisão ±0,5 °C) e umidade relativa (0 a 100% UR). Cobre a
+faixa de todos os equipamentos do seed (de -25 °C do freezer a 6 °C da geladeira) com precisão
+suficiente para a regra de alerta (desvio ≥ 1,5 °C = ALTA; ≥ 3 °C = CRÍTICA).
+
+**Reed Switch:** interruptor magnético que sinaliza `portaAberta: true/false`. O limiar de **`>= 5 min`**
+separa uma abertura operacional (carga/descarga de dezenas de segundos) de uma porta esquecida — a
+causa mais comum de perda de frio — sem gerar falso positivo.
+
+**ESP32 + MQTT:** publica QoS 1 em `frio/equipamentos/{id}/leitura` com o payload JSON abaixo. Se a
+internet cair, as leituras ficam num buffer circular em memória flash/NVS e são reenviadas na
+reconexão; o QoS 1 garante que a mensagem não se perde no meio do caminho.
+
+```json
+{"temperatura": -20.4, "umidade": 72.0, "portaAberta": false, "registradaEm": "2026-11-15T15:10:00-03:00", "origem": "SIMULADO"}
+```
+
+### Script de simulação (`simulacao/sensor.py`)
+
+Dependência: `pip install -r simulacao/requirements.txt` (apenas `paho-mqtt>=2.0.0`).
+Validação offline do contrato (sem broker): `python3 simulacao/teste_contrato.py`.
+
+```bash
+# 1. broker (Docker)
+docker run -d --name frio-mqtt -p 1883:1883 eclipse-mosquitto:2 \
+  sh -c "printf 'listener 1883\nallow_anonymous true\n' > /mosquitto/config/mosquitto.conf && mosquitto -c /mosquitto/config/mosquitto.conf"
+
+# 2. (recomendado) recarregar o seed para estado limpo — ver seção Banco de Dados
+# 3. API com a ponte ligada (a partir da raiz do repositório)
+Mqtt__Habilitado=true dotnet run --project src/FrioSolidario.Api
+
+# 4. cenários do sensor (adicione --conferir-api para validar alerta e latência via HTTP/JWT)
+python3 simulacao/sensor.py --cenario normal --equipamento 1
+python3 simulacao/sensor.py --cenario pico-curto --rapido --conferir-api          # 0 alertas (2 fora + retorno)
+python3 simulacao/sensor.py --cenario quebra-compressor --rapido --conferir-api   # 1 alerta TEMP_ALTA (equip. 4)
+python3 simulacao/sensor.py --cenario porta-aberta --rapido --conferir-api        # 1 alerta PORTA_ABERTA (equip. 6)
+python3 simulacao/sensor.py --cenario porta-40s --rapido --conferir-api           # 0 alertas (anti-alarme-falso)
+
+# 5. conferir manualmente via curl (autenticado na instituição 2, dona do equip. 4)
+TOKEN=$(curl -s -X POST http://localhost:5199/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"rafael.nunes@bairrosolidario.example","senha":"Frio@2026"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+curl -s "http://localhost:5199/api/alertas?status=ABERTO&equipamentoId=4" -H "Authorization: Bearer $TOKEN"
+curl -s "http://localhost:5199/api/equipamentos/4/leituras?periodo=24h" -H "Authorization: Bearer $TOKEN"
+```
+
+Argumentos: `--host` (default `localhost`), `--port` (default `1883`), `--equipamento` (default por
+cenário: `4` para `quebra-compressor`/`pico-curto`, `6` para `porta-aberta`/`porta-40s`, `1` para
+`normal`), `--perfil` (`camara` | `geladeira` | `freezer`, inferido pelo equipamento no `seed.sql`),
+`--rapido` (intervalo de 2 s em vez de 120 s), `--conferir-api` (login JWT + checagem automática de
+alertas e latência) e `--cenario` (`normal` | `pico-curto` | `quebra-compressor` | `porta-aberta` |
+`porta-40s`).
+
+> **Timestamps no `--rapido` e compatibilidade com `db/seed.sql`:** `quebra-compressor` e `pico-curto`
+> publicam em tempo real (`agora`), ficando sempre posteriores ao `seed.sql` recém-carregado e visíveis
+> de imediato em `GET /leituras?periodo=24h`. Já `porta-aberta` mede duração pelos `registradaEm` e
+> ancora em `agora - 6m` (`-6m, -4m, -2m, agora`); se detectar que o `seed.sql` rodou há menos de 6 min,
+> ancora `1s` após a última leitura do seed e avança `+100s` por leitura (`5,0 min` totais), sem colidir
+> com leituras `portaAberta=false` anteriores nem estourar a tolerância de `+5 min` do `LeituraService`.
+
 **O que a ponte faz com mensagem ruim:** só registra no log e mantém a assinatura. Temperatura fora de
 -40..80, JSON inválido, tópico fora do padrão e equipamento inexistente **não** viram leitura, e o
 sensor não tem canal para receber erro — o log é a evidência. Medido em
@@ -391,7 +467,7 @@ capturas e o roteiro executado estão em `docs/evidencias/app-mobile.md`.
 | Lotes doados | pronto — `/api/lotes` (lista, busca, cadastro e retirada), sempre na instituição do token; alimenta os indicadores de kg doados e perda |
 | App mobile | pronto — 5 telas + relatório em PDF integrados à API, em `mobile/`; 119 testes unitários; ver "App mobile (Kevin)" e `docs/evidencias/app-mobile.md` |
 | Ação tomada na resolução do alerta | pronto — corpo opcional em `PATCH /api/alertas/{id}/resolver`, coluna `alerta.acao_tomada`; banco já carregado precisa de `db/migracoes/2026-11-15-alerta-acao-tomada.sql` |
-| IoT (MQTT) | ponte pronta na API (tópico `frio/equipamentos/{id}/leitura`, ver "Ponte MQTT"); falta só o script do sensor publicando, do Roger |
+| IoT (MQTT) | pronto — ponte na API (`frio/equipamentos/{id}/leitura`) + simulador `simulacao/sensor.py` com 5 cenários e testes de contrato em `simulacao/teste_contrato.py` (ver "Ponte MQTT") |
 
 ## Uso de IA
 
@@ -417,7 +493,7 @@ instituição real foi usada; os dados do projeto são fictícios.
 | App mobile: impressora física | o roteiro rodou em Fire TV (paisagem) e em celular em pé contra PostgreSQL 18.6, com a prévia de impressão do Android abrindo o PDF (`docs/evidencias/app-mobile.md`); falta só mandar para uma impressora de verdade | Kevin |
 | App mobile em tablet | a interface nova foi conferida em celular, com o roteiro de erros repetido (`docs/evidencias/app-mobile.md`); o trilho lateral de tela larga não foi visto em aparelho | Kevin |
 | Notificação fora do app | o alerta aparece com o app aberto (atualização a cada 10 s); não há push com o app fechado | grupo |
-| Sensor MQTT publicando ao vivo | a ponte da API está pronta e medida (mensagem do broker vira leitura e alerta em ~1 s); o script do sensor publicando é que ainda não existe no repositório | Roger |
+| Sensor MQTT publicando ao vivo | ponte da API pronta e medida (~1 s) + `simulacao/sensor.py` pronto com 5 cenários e validado contra o contrato (`simulacao/teste_contrato.py`); a demo ao vivo usa sensores simulados via software em vez de ESP32 físico | Roger |
 | Testes automatizados (xUnit) abrangentes | os casos 5, 6 e o 401 do caso 7 rodam sem banco (regra, serviço e API via TestServer); login com BCrypt, perfis, CRUD restante e relatório seguem verificados por chamada real, com evidência em `docs/` | Arthur |
 | HTTPS | a demo roda em HTTP na rede local (`:5199`); em produção a API ficaria atrás de TLS | grupo |
 | Chave do JWT | o `appsettings.json` traz uma chave de desenvolvimento; fora da demo, defina `Jwt__Key` | grupo |

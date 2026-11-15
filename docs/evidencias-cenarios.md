@@ -1,0 +1,165 @@
+# Evidências dos Cenários de IoT — Relatório Técnico
+
+**Responsável:** Roger · **Status:** pronto para exportação ao PDF final da entrega
+
+> Este documento é a evidência técnica da frente de IoT: separa simulação de hardware físico,
+> especifica os sensores e registra os 4 cenários controlados que provam a regra de alerta. Os logs e
+> timelines abaixo seguem **100%** o contrato MQTT do repositório (tópico
+> `frio/equipamentos/{id}/leitura`, campos `temperatura`, `umidade`, `portaAberta`, `registradaEm`, `origem`).
+
+---
+
+## 1. Arquitetura: Hardware Físico vs. Simulação
+
+| Aspecto | **Simulado na entrega** | **Hardware físico em produção** |
+|---|---|---|
+| **Sensor de temperatura/umidade** | Script Python (`simulacao/sensor.py`) gerando valores | **DHT22** (faixa -40 a 80 °C, 0 a 100% UR, precisão ±0,5 °C) |
+| **Sensor de porta** | Campo `portaAberta` alternado pelo script | **Reed Switch** magnético (normalmente aberto/fechado) |
+| **Microcontrolador** | Processo local publicando via MQTT | **ESP32** (Wi-Fi + MQTT) |
+| **Publicação** | `paho-mqtt` → broker Mosquitto (`localhost:1883`) | MQTT (QoS 1) → broker Mosquitto |
+| **Tópico** | `frio/equipamentos/{id}/leitura` | `frio/equipamentos/{id}/leitura` |
+| **Payload** | `{"temperatura", "umidade", "portaAberta", "registradaEm", "origem": "SIMULADO"}` | mesmo payload (`origem: "SENSOR"`) |
+| **Persistência no banco** | Ponte fixa `OrigemLeitura.SENSOR` ao gravar qualquer leitura MQTT | `OrigemLeitura.SENSOR` |
+| **Queda de internet** | Não se aplica (broker local) | Buffer local em memória flash/NVS; reenvio ao reconectar |
+| **Custo de hardware** | R$ 0 (script) | ~R$ 60–80 por ponto (ESP32 + DHT22 + Reed Switch) |
+
+> **Declaração explícita para a banca:** a entrega usa **simulação** (script + broker Docker). O
+> hardware físico (ESP32 + DHT22 + Reed Switch) é a implementação de produção, com o **mesmo contrato
+> MQTT**. Não há ambiguidade: o que roda na demo é simulado; o que está especificado é o hardware real.
+
+---
+
+## 2. Especificação Técnica dos Sensores
+
+### 2.1 DHT22 (temperatura e umidade)
+| Parâmetro | Valor |
+|---|---|
+| Faixa de temperatura | -40 a 80 °C |
+| Faixa de umidade relativa | 0 a 100 % UR |
+| Precisão de temperatura | ±0,5 °C |
+| Precisão de umidade | ±2 a 5 % UR |
+| Interface | digital (single-wire), compatível com ESP32 |
+| Adequação | câmaras frias (0–4 °C) e freezers (-25 a -18 °C) — dentro da faixa de operação |
+
+**Por que o DHT22:** cobre toda a faixa dos equipamentos do seed (de -25 °C do freezer a 6 °C da
+geladeira) com precisão suficiente para a regra de alerta (desvio ≥ 1,5 °C = ALTA; ≥ 3 °C = CRÍTICA).
+
+### 2.2 Reed Switch magnético (porta)
+| Parâmetro | Valor |
+|---|---|
+| Funcionamento | Interruptor acionado por campo magnético (ímã na porta) |
+| Estados | Normalmente aberto (porta fechada) / fechado (porta aberta) |
+| Sinal | `portaAberta: true/false` no payload |
+
+**Por que o limiar de 5 minutos:** a regra `PORTA_ABERTA` só dispara se a porta permanecer aberta **sem
+interrupção por 5 minutos ou mais (`>= 5 min`)** (≥ 15 min = ALTA; senão MEDIA). Aberturas curtas de carga e
+descarga (ex.: 40 segundos) não disparam nada — evita falso positivo e fadiga de alerta, mantendo a
+detecção de porta esquecida (a causa mais comum de perda de frio).
+
+---
+
+## 3. Matriz de Evidências — Cenários Controlados (`simulacao/sensor.py`)
+
+> Todos os cenários abaixo são executáveis por `simulacao/sensor.py` e verificados automaticamente sem
+> broker por `python3 simulacao/teste_contrato.py` (4/4 testes verdes contra o espelho de
+> `LeituraMqttMensagem.cs`, `LeituraService.cs`, `RegraDeAlerta.cs` e `db/seed.sql`). Com a API e o
+> Mosquitto rodando, adicione `--conferir-api` para autenticar no JWT da instituição dona do equipamento,
+> confirmar a contagem de alertas e medir a latência real.
+
+### 3.1 Cenário 1A — Quebra de Compressor (`TEMP_ALTA`, 3 leituras seguidas)
+
+**Comando:** `python3 simulacao/sensor.py --cenario quebra-compressor --rapido --conferir-api`
+**Equipamento:** 4 — *Freezer de congelados* (*Mercado Bairro Solidário*, login `rafael.nunes@bairrosolidario.example`, faixa **-25 a -18 °C**).
+**Sequência publicada:** `4,0 °C → 6,0 °C → 7,8 °C → 7,9 °C`.
+
+| Leitura | Horário exemplo (`--rapido`) | Temperatura | Fora da faixa? | Alerta gerado? | Observação |
+|---|---|---|---|---|---|
+| 1ª | `16:10:13-03:00` | 4,0 °C | sim | **não** | 1 leitura fora não basta |
+| 2ª | `16:10:15-03:00` | 6,0 °C | sim | **não** | 2 leituras fora não basta |
+| 3ª | `16:10:17-03:00` | 7,8 °C | sim | **sim — 1 alerta `TEMP_ALTA` (`CRITICA`)** | desvio +25,8 °C ≥ 3 °C |
+| 4ª | `16:10:19-03:00` | 7,9 °C | sim | **não** | idempotência: alerta aberto não duplica |
+
+### 3.2 Cenário 1B — Pico Curto: 1 ou 2 Leituras Fora NÃO Disparam Alerta
+
+**Comando:** `python3 simulacao/sensor.py --cenario pico-curto --rapido --conferir-api`
+**Equipamento:** 4 — *Freezer de congelados* (faixa **-25 a -18 °C**).
+**Sequência publicada:** `4,0 °C → 6,0 °C → -20,5 °C` (retorno à faixa na 3ª leitura).
+
+| Leitura | Horário exemplo (`--rapido`) | Temperatura | Fora da faixa? | Alerta gerado? | Observação |
+|---|---|---|---|---|---|
+| 1ª | `16:10:13-03:00` | 4,0 °C | sim | **não** | 1ª fora da faixa |
+| 2ª | `16:10:15-03:00` | 6,0 °C | sim | **não** | 2ª fora da faixa |
+| 3ª | `16:10:17-03:00` | -20,5 °C | não | **não — 0 alertas** | retorno à faixa zera a sequência |
+
+**Métricas de latência (`quebra-compressor`):**
+
+| Modo | Intervalo | Tempo 1ª leitura fora → alerta na API |
+|---|---|---|
+| Normal (operação real) | 2 min | ~4 a 6 min (3 leituras) — bem abaixo da meta de 15 min do pitch |
+| `--rapido` (demo ao vivo) | 2 s | ~4,5 a 5,0 s (2 intervalos de 2 s + ~0,5 s da ponte MQTT → PostgreSQL) |
+
+**Evidência no banco:** o `criado_em` do alerta é o instante exato da **terceira** leitura, e o log da
+ponte registra `1 alerta(s) aberto(s)` apenas na 3ª publicação — ver
+`docs/evidencias/mqtt-ponte-ponta-a-ponta.md`.
+
+### 3.3 Cenário 2A — Porta Aberta Crítica (`PORTA_ABERTA`, `>= 5 min`)
+
+**Comando:** `python3 simulacao/sensor.py --cenario porta-aberta --rapido --conferir-api`
+**Equipamento:** 6 — *Câmara de resfriamento* (*Padaria Sabor e Partilha*, login `carla.mendes@saborepartilha.example`, faixa **0–4 °C**).
+**Comportamento:** `portaAberta: true` sustentado por 5 minutos ou mais (a regra usa `>=`).
+
+> **Por que o equipamento 6 e não o 3:** o `seed.sql` já deixa o equipamento 3 com `portaAberta=TRUE` nas
+> últimas leituras e um alerta `PORTA_ABERTA` **aberto**. O equipamento 6 inicia com porta fechada e sem
+> nenhum alerta aberto (seu único alerta histórico no seed já está `RESOLVIDO`).
+>
+> **Ancoragem inteligente no `--rapido`:** `RegraDeAlerta` mede o tempo de porta aberta pela diferença
+> entre os `registradaEm`, e `LeituraService` recusa datas mais de 5 min no futuro. No `--rapido`, o
+> `sensor.py` ancora em `agora - 6 min` (`-6m, -4m, -2m, agora`); se detectar que o `seed.sql` foi
+> recarregado há menos de 6 min, ancora `1s` após a última leitura do seed e avança `+100s` por leitura
+> (total `5,0 min`), evitando colisão com leituras `portaAberta=false` do seed sem estourar `+5 min`.
+
+| Leitura | Horário simulado (`registradaEm`) | Acumulado | `portaAberta` | Alerta gerado? |
+|---|---|---|---|---|
+| 1ª | `16:04:13-03:00` | 0,0 min | `true` | **não** |
+| 2ª | `16:06:13-03:00` | 2,0 min | `true` | **não** |
+| 3ª | `16:08:13-03:00` | 4,0 min | `true` | **não** |
+| 4ª | `16:10:13-03:00` | **6,0 min (`>= 5 min`)** | `true` | **sim — 1 alerta `PORTA_ABERTA` (`MEDIA`)** |
+
+### 3.4 Cenário 2B — Carga e Descarga Normal: 40 s (Anti-Alarme-Falso)
+
+**Comando:** `python3 simulacao/sensor.py --cenario porta-40s --rapido --conferir-api`
+**Equipamento:** 6 — *Câmara de resfriamento*.
+**Comportamento:** `portaAberta: true` por **40 segundos**, seguido de `portaAberta: false`.
+
+| Leitura | Horário simulado (`registradaEm`) | `portaAberta` | Alerta gerado? | Observação |
+|---|---|---|---|---|
+| 1ª | `16:09:33-03:00` | `true` | **não** | abertura para carga/descarga |
+| 2ª | `16:10:13-03:00` (+40 s) | `false` | **não — 0 alertas** | fechou em 40 s (`< 5 min`) |
+
+**Resultado:** **0 alertas** — comprova o filtro anti-alarme-falso e diferencia claramente os horários do
+Cenário 2B (`40 s`) em relação ao Cenário 2A (`>= 5 min`).
+
+---
+
+## 4. Checklist de Captura (Plano B para a Apresentação)
+
+> Gravar um vídeo curto de tela do app recebendo o alerta como plano B, caso a demo ao vivo falhe.
+
+- [ ] **Cenário 1A (TEMP_ALTA):** gravar o app mostrando o alerta `TEMP_ALTA` surgindo após a 3ª leitura (`--cenario quebra-compressor --rapido`).
+- [ ] **Cenário 1B (anti-falso-positivo temperatura):** gravar que 2 leituras fora + retorno (`--cenario pico-curto --rapido`) geram 0 alertas.
+- [ ] **Cenário 2A (PORTA_ABERTA):** gravar o alerta `PORTA_ABERTA` com 5 min ou mais (`>= 5 min`) de porta aberta (`--cenario porta-aberta --rapido`).
+- [ ] **Cenário 2B (anti-alarme-falso porta):** gravar que **nenhum** alerta aparece após 40 s de porta aberta (`--cenario porta-40s --rapido`).
+- [ ] Capturar tela do terminal com o log da ponte (`MQTT: equipamento ... -> leitura ..., 1 alerta(s) aberto(s).`).
+- [ ] Capturar tela do `GET /api/alertas` (autenticado com Bearer JWT) mostrando o alerta aberto.
+- [ ] Salvar os prints em `docs/evidencias/prints/`.
+
+---
+
+## 5. Limites declarados
+
+- A demo roda com broker **sem autenticação** (`allow_anonymous true`) em rede local; em produção a
+  ponte aceita `Mqtt:Usuario`/`Mqtt:Senha`.
+- O script `simulacao/sensor.py` é a fonte dos valores; o hardware físico (ESP32 + DHT22 + Reed Switch)
+  é a especificação de produção, não executado na demo.
+- QoS 1 na assinatura: se a API cair entre o `INSERT` e o ack, a mensagem pode ser reentregue e gerar
+  leitura duplicada — não há chave de idempotência por mensagem (limite já declarado no README).
