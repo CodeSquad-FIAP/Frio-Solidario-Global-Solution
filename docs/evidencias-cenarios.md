@@ -152,7 +152,8 @@ Cenário 2B (`40 s`) em relação ao Cenário 2A (`>= 5 min`).
 - [ ] **Cenário 2B (anti-alarme-falso porta):** gravar que **nenhum** alerta aparece após 40 s de porta aberta (`--cenario porta-40s --rapido`).
 - [x] Capturar tela do terminal com o log da ponte (`MQTT: equipamento ... -> leitura ..., 1 alerta(s) aberto(s).`) — **feito**: log colado em §6.1–§6.4.
 - [x] Capturar tela do `GET /api/alertas` (autenticado com Bearer JWT) mostrando o alerta aberto — **feito**: JSON real colado em §6.6.
-- [ ] Salvar os prints em `docs/evidencias/prints/`. (pendente: só falta a captura de imagem/vídeo)
+- [x] Salvar os prints em `docs/evidencias/prints/`. — **feito**: `app-painel-critico.png`, `app-alertas-temp-alta.png`, `app-detalhe-freezer.png` (e os `caso-*` da frente de API).
+- [x] Vídeo curto de tela do app recebendo o alerta — **feito**: `docs/evidencias/video-demo-app-15-11-2026.mp4` (1 min 17 s), ver §6.7.
 
 ---
 
@@ -287,3 +288,36 @@ ia com `"origem": "SIMULADO"` e o banco gravou `SENSOR`: é o comportamento decl
 `GET /api/equipamentos/4/leituras?periodo=24h` devolveu 12 leituras, as 4 últimas do simulador
 (`4.0 → 6.0 → 7.8 → 7.9 °C`, `21:22:46 → 21:22:52 UTC`). Ou seja: o mesmo JSON que a tela de alertas do
 app já consome.
+
+### 6.7 O alerta chegando no app (vídeo e prints)
+
+Mesma execução, agora pela tela: app Android do próprio repositório (`mobile/`), APK debug instalado no
+emulador AVD API 37, apontando para a API via `frio.apiUrl` (default `http://10.0.2.2:5199/`, que é o
+host visto de dentro do emulador).
+
+```bash
+export JAVA_HOME="C:/Program Files/Eclipse Adoptium/jdk-21.0.11.10-hotspot"
+cd mobile && ./gradlew :app:assembleDebug          # 21 MB em app/build/outputs/apk/debug/
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -n br.com.fiap.friosolidario/.MainActivity
+adb shell screenrecord --bit-rate 6000000 --time-limit 90 /sdcard/demo-frio.mp4
+python simulacao/sensor.py --cenario quebra-compressor --rapido   # durante a gravação
+```
+
+Sequência que o vídeo mostra (`docs/evidencias/video-demo-app-15-11-2026.mp4`, 1 min 17 s):
+
+| tempo | tela | o que aparece |
+|---|---|---|
+| 0:00 | Painel | "1 em atenção · 2 equipamentos": Freezer −20,1 °C normal, Balcão 4,1 °C em atenção com porta aberta |
+| ~0:18 | — | `sensor.py` publica 4,0 → 6,0 → **7,8** °C; a ponte grava e o alerta #6 nasce no banco |
+| ~0:28 | Painel | em uma atualização de 10 s o Freezer vira **vermelho, 7,9 °C, "Fora da faixa · agora"**, e o sino ganha o badge **2** |
+| ~0:30 | Alertas | "**Temperatura alta** · Freezer de congelados · Severidade crítica · aberto agora · 15/11 21:42" |
+| ~1:05 | Detalhe | **7,9 °C**, "Fora da faixa", umidade 75 %, porta fechada, e o gráfico de 24 h com o salto no fim da série |
+
+Prints: `docs/evidencias/prints/app-painel-critico.png`, `app-alertas-temp-alta.png`,
+`app-detalhe-freezer.png`.
+
+**O que isso prova:** o app não usa dado mockado — os números da tela são a leitura que entrou por MQTT,
+passou pela ponte e foi gravada no PostgreSQL. É a mesma corrente que a banca vê quando o `sensor.py` roda
+no palco. Em aparelho físico, troque o alvo por `adb reverse tcp:5199 tcp:5199` e
+`./gradlew :app:installDebug -Pfrio.apiUrl=http://localhost:5199/`.
