@@ -166,5 +166,16 @@ não se repetiu ao sair com "voltar" nem ao reiniciar o app, e a causa não foi 
 | `OldTargetApi` | Não alterado: o alvo continua na API 36, como no design; subir para 37 a quatro dias da entrega mudaria comportamento sem roteiro refeito |
 | Painel baixa a série de 24 h para ler a última leitura | Rota nova na API, `GET /api/equipamentos/{id}/leituras/ultima` (200 com a leitura, 204 sem nenhuma; 3 testes xUnit), e o painel e o cabeçalho do detalhe passaram a usá-la. Na API local a resposta tem 151 bytes, contra 21,6 KB da série de 24 h do mesmo equipamento. O texto "Nenhuma leitura nos últimos 7 dias" virou "Nenhuma leitura recebida ainda", porque a rota não tem janela |
 
-Essas correções passaram nos testes e no lint, e o arquivo de rede empacotado no APK demo foi conferido,
-mas **não foram vistas rodando no aparelho**: o celular saiu do adb antes da reinstalação.
+Conferido depois no Galaxy S23 Ultra, com o build demo apontado para `localhost` e a API local:
+
+| Item | Resultado |
+|---|---|
+| Build demo com a rede restrita | Login mantido, painel, detalhe e PDF funcionam por `localhost` |
+| Painel pela rota de última leitura | Os três equipamentos com leitura aparecem com valor e horário; o equipamento recém-cadastrado (204) aparece como "Nenhuma leitura recebida ainda" |
+| Relatório | "Últimos 7 dias" mostra 09/11 a 15/11 e gera o PDF; "Últimos 30 dias" mostra 17/10 a 15/11 |
+| Umidade máxima de 0,5% | Aceita no formulário e gravada pela API |
+
+Não foi feito o teste negativo no aparelho (um host fora da lista sendo recusado por texto puro): a
+restrição foi conferida no arquivo empacotado nos dois APKs (debug aberto, demo restrito), não em
+execução. O número de requisições do painel também não foi medido no aparelho; quem garante que ele
+não pede mais a série é o teste `painel pede so a ultima leitura, nunca a serie do grafico`.
