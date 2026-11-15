@@ -12,3 +12,9 @@
 
 # A raiz ignora [Dd]ebug/ por causa do .NET; aqui src/debug é código do build de debug do Android.
 !/app/src/debug/
+
+# Gerados pelo Android Studio/Gradle na máquina de cada um: caminho do SDK, cache do daemon.
+# Sem barra inicial no local.properties para pegar também mobile/app/local.properties.
+local.properties
+app/gradle/
+gradle-daemon-jvm.properties
