@@ -13,11 +13,13 @@ private val HORA = DateTimeFormatter.ofPattern("HH:mm", PT_BR)
 private val DIA_HORA = DateTimeFormatter.ofPattern("dd/MM HH:mm", PT_BR)
 private val DIA = DateTimeFormatter.ofPattern("dd/MM/yyyy", PT_BR)
 
-fun temperatura(valor: Double): String = String.format(PT_BR, "%.1f °C", valor)
+// O espaço entre o número e a unidade é inseparável (\u00A0): em tela estreita ou com fonte
+// grande a quebra de linha nunca deixa "°C" ou "kg" sozinho na linha de baixo.
+fun temperatura(valor: Double): String = String.format(PT_BR, "%.1f\u00A0°C", valor)
 
-fun umidade(valor: Double): String = String.format(PT_BR, "%.0f %%", valor)
+fun umidade(valor: Double): String = String.format(PT_BR, "%.0f%%", valor)
 
-fun quilos(valor: Double): String = String.format(PT_BR, "%.1f kg", valor)
+fun quilos(valor: Double): String = String.format(PT_BR, "%.1f\u00A0kg", valor)
 
 /** A API manda UTC; a tela mostra no fuso do aparelho. */
 fun hora(instante: Instant, fuso: ZoneId = ZoneId.systemDefault()): String = HORA.format(instante.atZone(fuso))

@@ -10,9 +10,15 @@ class FormatosTest {
 
     @Test
     fun `temperatura usa virgula e uma casa`() {
-        assertEquals("7,6 °C", temperatura(7.6))
-        assertEquals("-18,0 °C", temperatura(-18.0))
-        assertEquals("4,0 °C", temperatura(3.96))
+        // Espaço inseparável: o número nunca fica em uma linha e a unidade na outra.
+        assertEquals("7,6\u00A0°C", temperatura(7.6))
+        assertEquals("-18,0\u00A0°C", temperatura(-18.0))
+        assertEquals("4,0\u00A0°C", temperatura(3.96))
+    }
+
+    @Test
+    fun `umidade sem casas e sem espaco antes do sinal`() {
+        assertEquals("72%", umidade(72.4))
     }
 
     @Test
