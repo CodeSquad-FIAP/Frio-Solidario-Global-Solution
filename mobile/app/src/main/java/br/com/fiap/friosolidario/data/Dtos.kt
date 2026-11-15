@@ -59,6 +59,8 @@ data class EquipamentoDto(
     val tempMax: Double,
     val umidMax: Double,
     val ativo: Boolean = true,
+    /** Vem preenchida nas listagens: o painel não precisa de uma requisição por equipamento. */
+    val ultimaLeitura: LeituraDto? = null,
 )
 
 @Serializable

@@ -79,16 +79,40 @@ internal sealed class EquipamentosEmMemoria(params Equipamento[] equipamentos) :
 {
     private readonly List<Equipamento> _itens = [.. equipamentos];
 
-    public Task<IReadOnlyList<(Equipamento Equipamento, string Instituicao)>> ListarAsync(
+    /// <summary>Fonte das ultimas leituras; nula nos testes que nao olham para elas.</summary>
+    public ILeituraRepository? Leituras { get; set; }
+
+    public async Task<IReadOnlyList<(Equipamento Equipamento, string Instituicao, Leitura? UltimaLeitura)>> ListarAsync(
         long? instituicaoId = null, bool? ativo = null, CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyList<(Equipamento, string)>>(_itens
+    {
+        var alvo = _itens
             .Where(e => instituicaoId is null || e.InstituicaoId == instituicaoId)
             .Where(e => ativo is null || e.Ativo == ativo)
-            .Select(e => (e, "instituicao"))
-            .ToList());
+            .ToList();
 
-    public Task<(Equipamento Equipamento, string Instituicao)?> ObterAsync(long id, CancellationToken cancellationToken = default)
-        => Task.FromResult(_itens.FirstOrDefault(e => e.Id == id) is { } e ? ((Equipamento, string)?)(e, "instituicao") : null);
+        var lista = new List<(Equipamento, string, Leitura?)>();
+        foreach (var equipamento in alvo)
+        {
+            var ultima = Leituras is null
+                ? null
+                : (await Leituras.UltimasAsync(equipamento.Id, 1, cancellationToken)).FirstOrDefault();
+            lista.Add((equipamento, "instituicao", ultima));
+        }
+
+        return lista;
+    }
+
+    public async Task<(Equipamento Equipamento, string Instituicao, Leitura? UltimaLeitura)?> ObterAsync(
+        long id, CancellationToken cancellationToken = default)
+    {
+        var equipamento = _itens.FirstOrDefault(e => e.Id == id);
+        if (equipamento is null) return null;
+
+        var ultima = Leituras is null
+            ? null
+            : (await Leituras.UltimasAsync(id, 1, cancellationToken)).FirstOrDefault();
+        return (equipamento, "instituicao", ultima);
+    }
 
     public Task<bool> ExisteAsync(long id, CancellationToken cancellationToken = default)
         => Task.FromResult(_itens.Any(e => e.Id == id));

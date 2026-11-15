@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FrioSolidario.Application.DTOs;
+using FrioSolidario.Application.Relatorios;
 using FrioSolidario.Application.Repositories;
 using FrioSolidario.Application.Security;
 using FrioSolidario.Domain;
@@ -73,6 +74,9 @@ internal sealed class ApiDeTeste : WebApplicationFactory<global::Program>
         // JwtBearer (antes destes callbacks) e o token sairia assinado com outra chave — 401 em tudo.
         builder.ConfigureServices(servicos =>
         {
+            // As listagens devolvem a ultima leitura de cada equipamento: o fake le os Itens daqui.
+            Equipamentos.Leituras = Leituras;
+
             servicos.RemoveAll<ILeituraRepository>();
             servicos.RemoveAll<IAlertaRepository>();
             servicos.RemoveAll<IEquipamentoRepository>();
@@ -189,6 +193,51 @@ public class ApiTests
         var semDuplicar = await quarta.Content.ReadFromJsonAsync<LeituraRegistradaResponse>(JsonDaApi.Opcoes);
         Assert.Empty(semDuplicar!.AlertasAbertos);
         Assert.Single(app.Alertas.Itens);
+    }
+
+    /// <summary>
+    /// O painel do app precisa da lista ja com a ultima leitura de cada equipamento: sem isso ele
+    /// fazia uma requisicao por equipamento (N+1). Prova o dado no corpo da rota da instituicao.
+    /// </summary>
+    [Fact]
+    public async Task EquipamentosDaInstituicao_TrazemAUltimaLeitura()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente(instituicaoId: 1);
+
+        await cliente.PostAsJsonAsync("/api/leituras", Leitura(1, 2.5m, 0), JsonDaApi.Opcoes);
+        await cliente.PostAsJsonAsync("/api/leituras", Leitura(1, 3.5m, 1), JsonDaApi.Opcoes);
+
+        var daInstituicao1 = await cliente.GetFromJsonAsync<List<EquipamentoResponse>>(
+            "/api/instituicoes/1/equipamentos", JsonDaApi.Opcoes);
+
+        var camara = Assert.Single(daInstituicao1!);
+        Assert.NotNull(camara.UltimaLeitura);
+        Assert.Equal(3.5m, camara.UltimaLeitura!.Temperatura);
+        Assert.Equal(1, camara.UltimaLeitura.EquipamentoId);
+
+        var daInstituicao2 = await app.Cliente(instituicaoId: 2).GetFromJsonAsync<List<EquipamentoResponse>>(
+            "/api/instituicoes/2/equipamentos", JsonDaApi.Opcoes);
+
+        var freezer = Assert.Single(daInstituicao2!);
+        Assert.Null(freezer.UltimaLeitura);
+    }
+
+    /// <summary>
+    /// Sem datas o relatório cobre 7 dias incluindo hoje (não 8): o nome do arquivo traz a janela.
+    /// </summary>
+    [Fact]
+    public async Task RelatorioSemDatas_CobreSeteDiasIncluindoHoje()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente(instituicaoId: 1);
+
+        var resposta = await cliente.GetAsync("/api/equipamentos/1/relatorio");
+
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+        var hoje = DateOnly.FromDateTime(FusoDoProjeto.Local(DateTimeOffset.Now).DateTime);
+        var nome = resposta.Content.Headers.ContentDisposition!.FileName!.Trim('"');
+        Assert.Equal($"relatorio-equipamento-1-{hoje.AddDays(-6):yyyyMMdd}-{hoje:yyyyMMdd}.pdf", nome);
     }
 
     /// <summary>Rota aninhada do card do CRUD: `/instituicoes/{id}/equipamentos` respeita a instituição do token.</summary>

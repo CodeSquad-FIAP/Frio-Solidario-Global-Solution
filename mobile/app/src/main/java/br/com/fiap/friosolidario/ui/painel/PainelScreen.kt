@@ -172,16 +172,13 @@ private fun resumo(itens: List<EquipamentoNoPainel>): String {
     val amarelos = itens.count { it.semaforo == Semaforo.AMARELO }
     val semLeitura = itens.count { it.semaforo == Semaforo.SEM_LEITURA }
     val semSinal = itens.count { it.semaforo == Semaforo.SEM_SINAL }
-    // A leitura não veio e não há anterior para mostrar: não dá para dizer que está tudo bem.
-    val semResposta = itens.count { it.erroDaLeitura != null && it.ultimaLeitura == null }
 
     val partes = buildList {
         if (vermelhos > 0) add("$vermelhos fora da faixa")
         if (amarelos > 0) add("$amarelos em atenção")
         // Sensor parado nunca entra em "tudo dentro da faixa": não se sabe como ele está.
         if (semSinal > 0) add("$semSinal sem sinal")
-        if (semResposta > 0) add("$semResposta sem resposta")
-        if (semLeitura - semResposta > 0) add("${semLeitura - semResposta} sem leitura")
+        if (semLeitura > 0) add("$semLeitura sem leitura")
     }
     val total = if (itens.size == 1) "1 equipamento" else "${itens.size} equipamentos"
     return when {
@@ -209,8 +206,7 @@ private fun LinhaDoEquipamento(item: EquipamentoNoPainel, agora: Instant, aoAbri
                 Spacer(Modifier.height(2.dp))
                 Text(
                     when {
-                        leitura == null && item.erroDaLeitura != null -> "Não foi possível buscar a leitura agora"
-                        leitura == null -> "Nenhuma leitura recebida ainda"
+                        leitura == null -> "Nenhuma leitura registrada"
                         // O horário é o do dado (registradaEm), nunca o de quando a tela abriu.
                         item.semaforo == Semaforo.SEM_SINAL -> "Sem sinal desde ${diaEHora(leitura.registradaEm)}"
                         else -> buildString {

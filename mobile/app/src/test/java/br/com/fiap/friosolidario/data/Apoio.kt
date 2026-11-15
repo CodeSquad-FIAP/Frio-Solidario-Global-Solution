@@ -40,9 +40,17 @@ fun MockWebServer.rotas(vararg rotas: Pair<String, MockResponse>) {
     }
 }
 
-fun equipamentoJson(id: Long, nome: String = "Equipamento $id", min: Double = 0.0, max: Double = 4.0): String =
+fun equipamentoJson(
+    id: Long,
+    nome: String = "Equipamento $id",
+    min: Double = 0.0,
+    max: Double = 4.0,
+    ultimaLeitura: String? = null,
+): String =
     """{"id":$id,"instituicaoId":1,"instituicao":"Banco","nome":"$nome","tipo":"CAMARA",
-        "tempMin":$min,"tempMax":$max,"umidMax":85,"ativo":true}"""
+        "tempMin":$min,"tempMax":$max,"umidMax":85,"ativo":true${ultimaLeitura?.let { "," } ?: ""}${
+        ultimaLeitura?.let { "\"ultimaLeitura\":$it" } ?: ""
+    }}"""
 
 fun leituraJson(id: Long, equipamentoId: Long, temperatura: Double, em: String): String =
     """{"id":$id,"equipamentoId":$equipamentoId,"temperatura":$temperatura,"umidade":70,

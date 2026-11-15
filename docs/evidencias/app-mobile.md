@@ -54,7 +54,7 @@ registrou `FATAL EXCEPTION`.
 
 ## Testes automatizados do app
 
-`cd mobile && ./gradlew testDebugUnitTest` — **121 testes**, sem aparelho e sem API: mapeamento de erro
+`cd mobile && ./gradlew testDebugUnitTest` — **119 testes**, sem aparelho e sem API: mapeamento de erro
 por status e por falha de rede, login, semáforo, escala do gráfico, validação dos formulários, os
 repositórios contra um servidor HTTP de teste (MockWebServer), incluindo token vencido e download de
 PDF interrompido, e os ViewModels de painel, alertas, detalhe e lotes.

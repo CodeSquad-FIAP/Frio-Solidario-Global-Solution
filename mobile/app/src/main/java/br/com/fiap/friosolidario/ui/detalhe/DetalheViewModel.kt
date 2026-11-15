@@ -52,7 +52,6 @@ class DetalheViewModel(
             val periodo = _estado.value.periodo
             val equipamento = async { equipamentos.equipamento(equipamentoId) }
             val serie = async { buscarSerie(periodo) }
-            val ultima = async { equipamentos.ultimaLeitura(equipamentoId) }
 
             when (val resultado = equipamento.await()) {
                 is Resultado.Falha -> _estado.update { it.copy(equipamento = EstadoTela.Erro(resultado.erro)) }
@@ -62,7 +61,8 @@ class DetalheViewModel(
                         it.copy(
                             equipamento = EstadoTela.Conteudo(resultado.valor),
                             serie = if (it.periodo == periodo) telaDaSerie else it.serie,
-                            ultimaLeitura = (ultima.await() as? Resultado.Ok)?.valor,
+                            // A leitura do cabeçalho vem junto do equipamento: nada de uma segunda busca.
+                            ultimaLeitura = resultado.valor.ultimaLeitura,
                         )
                     }
                 }

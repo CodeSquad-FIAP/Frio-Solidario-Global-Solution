@@ -1,13 +1,10 @@
 package br.com.fiap.friosolidario.data
 
-import br.com.fiap.friosolidario.core.ErroApp
 import br.com.fiap.friosolidario.core.Resultado
 import br.com.fiap.friosolidario.core.chamar
+import br.com.fiap.friosolidario.core.mapear
 import br.com.fiap.friosolidario.dominio.Semaforo
 import br.com.fiap.friosolidario.dominio.semaforo
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 
 enum class Periodo(val api: String, val rotulo: String) {
     H24("24h", "24 horas"),
@@ -18,8 +15,6 @@ data class EquipamentoNoPainel(
     val equipamento: EquipamentoDto,
     val ultimaLeitura: LeituraDto?,
     val semaforo: Semaforo,
-    /** A busca da leitura falhou: "sem leitura" aqui é falta de resposta, não equipamento sem dado. */
-    val erroDaLeitura: ErroApp? = null,
 )
 
 class EquipamentoRepository(
@@ -29,48 +24,20 @@ class EquipamentoRepository(
 ) {
 
     /**
-     * Equipamentos ativos com a última leitura de cada um. A lista da API não traz leitura, então
-     * a última de cada equipamento é buscada em paralelo. Uma busca que falha deixa só aquele
-     * equipamento sem leitura e marcado com o erro (quem mostra decide se mantém a leitura anterior);
-     * se nenhuma responde, o painel mostra o erro em vez de tudo cinza.
+     * Equipamentos ativos com a última leitura de cada um. A própria listagem já traz a leitura
+     * (campo `ultimaLeitura`), então o painel inteiro sai em uma requisição — antes era uma por
+     * equipamento, o que ficava caro com a atualização automática de 15 s.
      */
-    suspend fun painel(): Resultado<List<EquipamentoNoPainel>> {
-        val equipamentos = when (val lista = chamar(aoExpirar) { api.equipamentos(ativo = true) }) {
-            is Resultado.Falha -> return lista
-            is Resultado.Ok -> lista.valor
-        }
-        if (equipamentos.isEmpty()) return Resultado.Ok(emptyList())
-
-        val ultimas = coroutineScope {
-            equipamentos.map { async { ultimaLeitura(it.id) } }.awaitAll()
-        }
-
-        val falhas = ultimas.filterIsInstance<Resultado.Falha>()
-        falhas.firstOrNull { it.erro == ErroApp.SessaoExpirada }?.let { return it }
-        if (falhas.size == equipamentos.size) return falhas.first()
-
-        return Resultado.Ok(
-            equipamentos.zip(ultimas) { equipamento, ultima ->
-                val leitura = (ultima as? Resultado.Ok)?.valor
+    suspend fun painel(): Resultado<List<EquipamentoNoPainel>> =
+        chamar(aoExpirar) { api.equipamentos(ativo = true) }.mapear { lista ->
+            lista.map { equipamento ->
                 EquipamentoNoPainel(
-                    equipamento,
-                    leitura,
-                    semaforo(equipamento, leitura, agora()),
-                    erroDaLeitura = (ultima as? Resultado.Falha)?.erro,
+                    equipamento = equipamento,
+                    ultimaLeitura = equipamento.ultimaLeitura,
+                    semaforo = semaforo(equipamento, equipamento.ultimaLeitura, agora()),
                 )
-            },
-        )
-    }
-
-    /**
-     * A leitura mais recente, de quando for (`null` se o equipamento nunca enviou nenhuma). É uma
-     * chamada pequena por equipamento; a série inteira só é baixada pela tela de detalhe.
-     */
-    suspend fun ultimaLeitura(equipamentoId: Long): Resultado<LeituraDto?> = chamar(aoExpirar) {
-        val resposta = api.ultimaLeitura(equipamentoId)
-        if (!resposta.isSuccessful) throw retrofit2.HttpException(resposta)
-        resposta.body()
-    }
+            }
+        }
 
     suspend fun equipamento(id: Long): Resultado<EquipamentoDto> = chamar(aoExpirar) { api.equipamento(id) }
 

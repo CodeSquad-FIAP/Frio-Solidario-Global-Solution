@@ -29,7 +29,9 @@ public sealed class EquipamentoService(
         }
 
         var lista = await equipamentos.ListarAsync(instituicaoId ?? instituicaoDoToken, ativo, cancellationToken);
-        return lista.Select(item => EquipamentoResponse.De(item.Equipamento, item.Instituicao)).ToList();
+        return lista
+            .Select(item => EquipamentoResponse.De(item.Equipamento, item.Instituicao, item.UltimaLeitura))
+            .ToList();
     }
 
     public async Task<EquipamentoResponse> ObterAsync(
@@ -42,7 +44,7 @@ public sealed class EquipamentoService(
 
         GarantirDoUsuario(encontrado.Equipamento.InstituicaoId, id, instituicaoDoToken);
 
-        return EquipamentoResponse.De(encontrado.Equipamento, encontrado.Instituicao);
+        return EquipamentoResponse.De(encontrado.Equipamento, encontrado.Instituicao, encontrado.UltimaLeitura);
     }
 
     public async Task<EquipamentoResponse> CriarAsync(
