@@ -69,6 +69,7 @@ private const val INTERVALO_DO_PAINEL_MS = 15_000L
 @Composable
 fun PainelScreen(
     sessao: Sessao,
+    alertasAbertos: Int?,
     aoAbrirEquipamento: (Long) -> Unit,
     aoAbrirAlertas: () -> Unit,
     aoNovoEquipamento: () -> Unit,
@@ -153,7 +154,9 @@ fun PainelScreen(
                                     item = item,
                                     agora = agora,
                                     aoAbrir = { aoAbrirEquipamento(item.equipamento.id) },
-                                    aoAbrirAlertas = aoAbrirAlertas,
+                                    // A API só abre o alerta na terceira leitura seguida fora da faixa: antes
+                                    // disso a linha já está vermelha, mas ainda não há alerta para tratar.
+                                    aoAbrirAlertas = aoAbrirAlertas.takeIf { (alertasAbertos ?: 0) > 0 },
                                 )
                             }
                         }
@@ -192,7 +195,7 @@ private fun resumo(itens: List<EquipamentoNoPainel>): String {
  * vem junto; em atenção, amarela; em ordem, sem cor nenhuma.
  */
 @Composable
-private fun LinhaDoEquipamento(item: EquipamentoNoPainel, agora: Instant, aoAbrir: () -> Unit, aoAbrirAlertas: () -> Unit) {
+private fun LinhaDoEquipamento(item: EquipamentoNoPainel, agora: Instant, aoAbrir: () -> Unit, aoAbrirAlertas: (() -> Unit)?) {
     val equipamento = item.equipamento
     val leitura = item.ultimaLeitura
     val cores = item.semaforo.cores()
@@ -242,7 +245,7 @@ private fun LinhaDoEquipamento(item: EquipamentoNoPainel, agora: Instant, aoAbri
                 },
             )
         }
-        if (critico) {
+        if (critico && aoAbrirAlertas != null) {
             Spacer(Modifier.height(12.dp))
             BotaoDaLinha("Ver o alerta e registrar o que foi feito", cores, aoAbrirAlertas, Modifier.fillMaxWidth())
         }

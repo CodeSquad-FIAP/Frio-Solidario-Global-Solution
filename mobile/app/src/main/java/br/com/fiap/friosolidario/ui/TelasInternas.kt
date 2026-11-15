@@ -130,7 +130,7 @@ fun TelasInternas(sessao: Sessao) {
                     Box(Modifier.width(2.dp).fillMaxHeight().background(MaterialTheme.colorScheme.onBackground))
                 }
                 Box(Modifier.weight(1f)) {
-                    Telas(nav, sessao, aoAtualizarContador = contador::atualizar)
+                    Telas(nav, sessao, alertasAbertos, aoAtualizarContador = contador::atualizar)
                 }
             }
         }
@@ -162,11 +162,12 @@ private fun NavHostController.irPara(area: Area) {
 }
 
 @Composable
-private fun Telas(nav: NavHostController, sessao: Sessao, aoAtualizarContador: () -> Unit) {
+private fun Telas(nav: NavHostController, sessao: Sessao, alertasAbertos: Int?, aoAtualizarContador: () -> Unit) {
     NavHost(navController = nav, startDestination = Rotas.PAINEL) {
         composable(Rotas.PAINEL) {
             PainelScreen(
                 sessao = sessao,
+                alertasAbertos = alertasAbertos,
                 aoAbrirEquipamento = { nav.navigate(Rotas.detalhe(it)) },
                 aoAbrirAlertas = { nav.irPara(Area.ALERTAS) },
                 aoNovoEquipamento = { nav.navigate(Rotas.NOVO_EQUIPAMENTO) },
