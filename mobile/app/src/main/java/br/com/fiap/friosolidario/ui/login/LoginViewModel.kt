@@ -45,7 +45,12 @@ class LoginViewModel(private val auth: AuthRepository) : ViewModel() {
         viewModelScope.launch {
             val resultado = auth.entrar(atual.email, atual.senha)
             _estado.update {
-                it.copy(enviando = false, erro = (resultado as? Resultado.Falha)?.erro)
+                when (resultado) {
+                    // Este ViewModel sobrevive ao logout: a senha não pode ficar no campo para
+                    // quem pegar o aparelho depois. O e-mail fica, para o próximo login.
+                    is Resultado.Ok -> it.copy(enviando = false, erro = null, senha = "")
+                    is Resultado.Falha -> it.copy(enviando = false, erro = resultado.erro)
+                }
             }
         }
     }
