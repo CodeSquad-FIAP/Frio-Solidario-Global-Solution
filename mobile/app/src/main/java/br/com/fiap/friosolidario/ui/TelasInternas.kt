@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import br.com.fiap.friosolidario.core.Sessao
+import br.com.fiap.friosolidario.ui.detalhe.BotaoDeRelatorio
 import br.com.fiap.friosolidario.ui.detalhe.DetalheScreen
 import br.com.fiap.friosolidario.ui.painel.PainelScreen
 
@@ -64,6 +65,7 @@ fun TelasInternas(sessao: Sessao) {
             DetalheScreen(
                 equipamentoId = entrada.arguments?.getLong("id") ?: return@composable,
                 aoVoltar = { nav.popBackStack() },
+                acoes = { equipamento -> BotaoDeRelatorio(equipamento) },
             )
         }
     }

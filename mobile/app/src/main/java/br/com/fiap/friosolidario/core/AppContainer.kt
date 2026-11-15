@@ -6,9 +6,11 @@ import br.com.fiap.friosolidario.data.AuthRepository
 import br.com.fiap.friosolidario.data.EquipamentoRepository
 import br.com.fiap.friosolidario.data.FrioApi
 import br.com.fiap.friosolidario.data.LoteRepository
+import br.com.fiap.friosolidario.data.RelatorioRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import java.io.File
 
 /** Monta as dependências uma vez, no início do app. Injeção manual: são poucas peças. */
 class AppContainer(contexto: Context) {
@@ -25,4 +27,7 @@ class AppContainer(contexto: Context) {
     val equipamentos = EquipamentoRepository(api, aoExpirar)
     val alertas = AlertaRepository(api, aoExpirar)
     val lotes = LoteRepository(api, aoExpirar)
+
+    /** Mesma pasta de `res/xml/file_paths.xml`: é dela que o FileProvider entrega o PDF. */
+    val relatorios = RelatorioRepository(api, aoExpirar) { File(contexto.applicationContext.cacheDir, "relatorios") }
 }
