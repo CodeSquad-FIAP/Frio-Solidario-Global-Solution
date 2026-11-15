@@ -1,5 +1,6 @@
 package br.com.fiap.friosolidario.ui.comum
 
+import br.com.fiap.friosolidario.ui.tema.FormaDoBotao
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -74,7 +75,7 @@ fun Formulario(
                     .verticalScroll(rememberScrollState())
                     .widthIn(max = 560.dp)
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = MargemDaTela, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 campos()
@@ -85,7 +86,7 @@ fun Formulario(
                     FaixaDeErro(erro)
                 }
 
-                Button(
+                Button(shape = FormaDoBotao,
                     onClick = aoEnviar,
                     enabled = !enviando,
                     modifier = Modifier

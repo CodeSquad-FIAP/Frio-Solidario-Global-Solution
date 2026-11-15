@@ -1,5 +1,6 @@
 package br.com.fiap.friosolidario.ui.comum
 
+import br.com.fiap.friosolidario.ui.tema.FormaDoBotao
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,12 +9,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudOff
@@ -24,6 +25,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import br.com.fiap.friosolidario.core.ErroApp
 
@@ -70,28 +71,19 @@ fun ErroComTentarDeNovo(erro: ErroApp, aoTentar: () -> Unit, modifier: Modifier 
         modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(32.dp),
+            .padding(horizontal = MargemDaTela, vertical = 32.dp),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(
-            iconeDo(erro),
-            contentDescription = null,
-            modifier = Modifier.size(56.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(tituloDo(erro), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+        Text(tituloDo(erro), style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(8.dp))
         Text(
             erro.mensagem,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.widthIn(max = 360.dp),
+            modifier = Modifier.widthIn(max = 420.dp),
         )
         Spacer(Modifier.height(24.dp))
-        Button(onClick = aoTentar) {
+        Button(shape = FormaDoBotao, onClick = aoTentar, modifier = Modifier.heightIn(min = 48.dp)) {
             Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text("Tentar de novo")
@@ -105,46 +97,46 @@ fun FaixaDeErro(erro: ErroApp, modifier: Modifier = Modifier, aoTentar: (() -> U
     Surface(
         color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.small,
         modifier = modifier.fillMaxWidth(),
     ) {
-        Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(iconeDo(erro), contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(12.dp))
             Text(erro.mensagem, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f).padding(vertical = 8.dp))
             if (aoTentar != null) {
-                TextButton(onClick = aoTentar) { Text("Tentar de novo") }
+                TextButton(shape = FormaDoBotao,
+                    onClick = aoTentar,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onErrorContainer),
+                ) { Text("Tentar de novo") }
             }
         }
     }
 }
 
+/** Lista sem itens: diz o que apareceria aqui e, quando há, o próximo passo. O ícone não é usado. */
 @Composable
 fun ListaVazia(
     texto: String,
     modifier: Modifier = Modifier,
     detalhe: String? = null,
-    icone: ImageVector = Icons.Outlined.Inbox,
+    @Suppress("UNUSED_PARAMETER") icone: ImageVector = Icons.Outlined.Inbox,
 ) {
     Column(
         modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(32.dp),
+            .padding(horizontal = MargemDaTela, vertical = 32.dp),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(icone, contentDescription = null, modifier = Modifier.size(56.dp), tint = MaterialTheme.colorScheme.outline)
-        Spacer(Modifier.height(16.dp))
-        Text(texto, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        Text(texto, style = MaterialTheme.typography.headlineMedium)
         if (detalhe != null) {
             Spacer(Modifier.height(8.dp))
             Text(
                 detalhe,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.widthIn(max = 360.dp),
+                modifier = Modifier.widthIn(max = 420.dp),
             )
         }
     }

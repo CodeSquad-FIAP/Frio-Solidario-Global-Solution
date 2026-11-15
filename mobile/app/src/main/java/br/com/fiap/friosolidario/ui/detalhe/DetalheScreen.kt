@@ -1,5 +1,13 @@
 package br.com.fiap.friosolidario.ui.detalhe
 
+import br.com.fiap.friosolidario.ui.tema.FormaDoBotao
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
+import br.com.fiap.friosolidario.ui.tema.FonteDeNumeros
+import br.com.fiap.friosolidario.ui.comum.LinhaSinal
+import br.com.fiap.friosolidario.ui.comum.Fio
+import br.com.fiap.friosolidario.ui.comum.MargemDaTela
+import br.com.fiap.friosolidario.ui.comum.corSuave
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -134,16 +142,19 @@ private fun Conteudo(
                 .verticalScroll(rememberScrollState())
                 .widthIn(max = 900.dp)
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            estado.erroAoAtualizar?.let { FaixaDeErro(it, aoTentar = aoTentarSerie) }
+            estado.erroAoAtualizar?.let {
+                FaixaDeErro(it, aoTentar = aoTentarSerie, modifier = Modifier.padding(start = MargemDaTela, end = MargemDaTela, top = 12.dp))
+            }
 
             Cabecalho(equipamento, estado.ultimaLeitura, agora)
 
-            acoes(equipamento)
-
-            SeletorDePeriodo(estado.periodo, aoMudarPeriodo)
+            Column(Modifier.padding(horizontal = MargemDaTela), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                acoes(equipamento)
+                SeletorDePeriodo(estado.periodo, aoMudarPeriodo)
+            }
 
             // Só este bloco troca quando o período muda; o cabeçalho acima não é refeito.
             when (val serie = estado.serie) {
@@ -160,7 +171,7 @@ private fun Conteudo(
                 is EstadoTela.Conteudo -> {
                     val leituras = serie.valor.leituras
                     Moldura {
-                        Column(Modifier.padding(16.dp)) {
+                        Column(Modifier.padding(horizontal = MargemDaTela, vertical = 16.dp)) {
                             Text("Temperatura · últimas ${serie.valor.periodo.rotulo}", style = MaterialTheme.typography.titleMedium)
                             Spacer(Modifier.height(12.dp))
                             if (leituras.isEmpty()) {
@@ -193,46 +204,41 @@ private fun Conteudo(
     }
 }
 
+/** Um bloco da tela, separado do anterior por um fio; sem cartão. */
 @Composable
 private fun Moldura(conteudo: @Composable () -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth(),
-    ) { conteudo() }
+    Column(Modifier.fillMaxWidth()) {
+        Fio()
+        conteudo()
+    }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * A leitura atual em letra grande, sobre a cor do estado quando ele pede ação. É o mesmo
+ * tratamento da linha do painel, para a pessoa reconhecer de onde veio.
+ */
 @Composable
 private fun Cabecalho(equipamento: EquipamentoDto, ultima: LeituraDto?, agora: Instant) {
     val estado = semaforo(equipamento, ultima, agora)
-    val cores = estado.cores()
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(cores.fundo, RoundedCornerShape(16.dp))
-            .padding(16.dp),
-    ) {
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            itemVerticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                ultima?.let { temperatura(it.temperatura) } ?: "—",
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.SemiBold,
-                color = cores.sobreFundo,
-            )
-            Etiqueta(estado.rotulo, cores.copy(fundo = MaterialTheme.colorScheme.surface), icone = estado.icone)
+    LinhaSinal(estado.cores()) {
+        Text(
+            ultima?.let { temperatura(it.temperatura) } ?: "—",
+            style = TextStyle(fontFamily = FonteDeNumeros, fontWeight = FontWeight.ExtraBold, fontSize = 64.sp, lineHeight = 64.sp),
+            maxLines = 1,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(estado.icone, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(estado.rotulo, style = MaterialTheme.typography.titleMedium)
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
         Text(
             "${equipamento.tipo.rotulo} · faixa de ${temperatura(equipamento.tempMin)} a ${temperatura(equipamento.tempMax)} · " +
                 "umidade até ${umidade(equipamento.umidMax)}",
             style = MaterialTheme.typography.bodyMedium,
-            color = cores.sobreFundo,
+            color = corSuave(),
         )
+        Spacer(Modifier.height(4.dp))
         Text(
             if (ultima == null) {
                 "Nenhuma leitura nos últimos 7 dias"
@@ -241,7 +247,7 @@ private fun Cabecalho(equipamento: EquipamentoDto, ultima: LeituraDto?, agora: I
                     "umidade ${umidade(ultima.umidade)} · porta ${if (ultima.portaAberta) "aberta" else "fechada"}"
             },
             style = MaterialTheme.typography.bodyMedium,
-            color = cores.sobreFundo,
+            color = corSuave(),
         )
     }
 }
@@ -254,7 +260,7 @@ private fun SeletorDePeriodo(atual: Periodo, aoMudar: (Periodo) -> Unit) {
             SegmentedButton(
                 selected = periodo == atual,
                 onClick = { aoMudar(periodo) },
-                shape = SegmentedButtonDefaults.itemShape(indice, Periodo.entries.size),
+                shape = SegmentedButtonDefaults.itemShape(indice, Periodo.entries.size, baseShape = FormaDoBotao),
             ) { Text(periodo.rotulo) }
         }
     }
@@ -295,7 +301,7 @@ private fun Tabela(leituras: List<LeituraDto>, equipamento: EquipamentoDto, tota
             Text(
                 if (total > leituras.size) "Últimas ${leituras.size} leituras" else "Leituras do período",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp),
+                modifier = Modifier.padding(horizontal = MargemDaTela),
             )
             Spacer(Modifier.height(8.dp))
             Linha("Horário", "Temperatura", "Umidade", "Porta", cabecalho = true)
@@ -321,8 +327,7 @@ private fun Linha(horario: String, temperatura: String, umidade: String, porta: 
     Row(
         Modifier
             .fillMaxWidth()
-            .background(if (fora) critico.fundo else androidx.compose.ui.graphics.Color.Transparent)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = MargemDaTela, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(horario, style = estilo, color = cor, modifier = Modifier.weight(1.3f))
@@ -335,8 +340,8 @@ private fun Linha(horario: String, temperatura: String, umidade: String, porta: 
             Text(
                 temperatura,
                 style = estilo,
-                color = if (fora) critico.sobreFundo else cor,
-                fontWeight = if (fora) FontWeight.SemiBold else null,
+                color = if (fora) critico.forte else cor,
+                fontWeight = if (fora) FontWeight.Bold else null,
                 textAlign = TextAlign.End,
             )
         }

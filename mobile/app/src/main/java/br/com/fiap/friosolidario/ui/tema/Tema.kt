@@ -1,73 +1,107 @@
 package br.com.fiap.friosolidario.ui.tema
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import br.com.fiap.friosolidario.R
+
+// Direção "linha-sinal": papel claro, tinta preta, fios grossos e quase nenhuma decoração. A cor
+// fica reservada para o estado: a linha do que está fora da faixa vira o próprio semáforo.
+
+private val Tinta = Color(0xFF0C0C0C)
+private val Papel = Color(0xFFFBFBF8)
+private val Vermelho = Color(0xFFC9281C)
+private val Amarelo = Color(0xFFF2B705)
 
 private val Claro = lightColorScheme(
-    primary = Color(0xFF0B5C7A),
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFC9E8F5),
-    onPrimaryContainer = Color(0xFF001F2A),
-    secondary = Color(0xFF4D616C),
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFD0E6F2),
-    onSecondaryContainer = Color(0xFF081E27),
-    background = Color(0xFFF4F8FB),
-    onBackground = Color(0xFF171C1F),
-    surface = Color(0xFFFFFFFF),
-    onSurface = Color(0xFF171C1F),
-    surfaceVariant = Color(0xFFE3EBF0),
-    onSurfaceVariant = Color(0xFF41484D),
-    surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFFFFFFF),
-    surfaceContainer = Color(0xFFEDF3F7),
-    surfaceContainerHigh = Color(0xFFE6EEF3),
-    surfaceContainerHighest = Color(0xFFDFE8EE),
-    outline = Color(0xFF71787D),
-    outlineVariant = Color(0xFFCFD8DE),
-    error = Color(0xFFB3261E),
+    primary = Tinta,
+    onPrimary = Papel,
+    primaryContainer = Tinta,
+    onPrimaryContainer = Papel,
+    secondary = Tinta,
+    onSecondary = Papel,
+    secondaryContainer = Tinta,
+    onSecondaryContainer = Papel,
+    tertiary = Tinta,
+    onTertiary = Papel,
+    background = Papel,
+    onBackground = Tinta,
+    surface = Papel,
+    onSurface = Tinta,
+    surfaceVariant = Color(0xFFECECE6),
+    onSurfaceVariant = Color(0xFF55554F),
+    surfaceContainerLowest = Papel,
+    surfaceContainerLow = Papel,
+    surfaceContainer = Color(0xFFF3F3EE),
+    surfaceContainerHigh = Color(0xFFF3F3EE),
+    surfaceContainerHighest = Color(0xFFECECE6),
+    outline = Tinta,
+    outlineVariant = Color(0xFFC8C8C1),
+    error = Vermelho,
     onError = Color.White,
-    errorContainer = Color(0xFFFCE4E1),
-    onErrorContainer = Color(0xFF5C1410),
+    errorContainer = Vermelho,
+    onErrorContainer = Color.White,
+    inverseSurface = Tinta,
+    inverseOnSurface = Papel,
+    inversePrimary = Amarelo,
 )
+
+private val TintaClara = Color(0xFFF3F3EE)
+private val Noite = Color(0xFF0D0D0C)
 
 private val Escuro = darkColorScheme(
-    primary = Color(0xFF86CFEB),
-    onPrimary = Color(0xFF003546),
-    primaryContainer = Color(0xFF004D64),
-    onPrimaryContainer = Color(0xFFC9E8F5),
-    secondary = Color(0xFFB4CAD6),
-    onSecondary = Color(0xFF1F333D),
-    secondaryContainer = Color(0xFF354A54),
-    onSecondaryContainer = Color(0xFFD0E6F2),
-    background = Color(0xFF0F1417),
-    onBackground = Color(0xFFDEE3E7),
-    surface = Color(0xFF171C1F),
-    onSurface = Color(0xFFDEE3E7),
-    surfaceVariant = Color(0xFF2A3136),
-    onSurfaceVariant = Color(0xFFC0C8CD),
-    surfaceContainerLowest = Color(0xFF0A0F12),
-    surfaceContainerLow = Color(0xFF171C1F),
-    surfaceContainer = Color(0xFF1B2024),
-    surfaceContainerHigh = Color(0xFF252B2E),
-    surfaceContainerHighest = Color(0xFF303639),
-    outline = Color(0xFF8A9297),
-    outlineVariant = Color(0xFF41484D),
-    error = Color(0xFFF2B8B5),
-    onError = Color(0xFF601410),
-    errorContainer = Color(0xFF8C1D18),
-    onErrorContainer = Color(0xFFF9DEDC),
+    primary = TintaClara,
+    onPrimary = Noite,
+    primaryContainer = TintaClara,
+    onPrimaryContainer = Noite,
+    secondary = TintaClara,
+    onSecondary = Noite,
+    secondaryContainer = TintaClara,
+    onSecondaryContainer = Noite,
+    tertiary = TintaClara,
+    onTertiary = Noite,
+    background = Noite,
+    onBackground = TintaClara,
+    surface = Noite,
+    onSurface = TintaClara,
+    surfaceVariant = Color(0xFF262624),
+    onSurfaceVariant = Color(0xFFB0B0A8),
+    surfaceContainerLowest = Noite,
+    surfaceContainerLow = Noite,
+    surfaceContainer = Color(0xFF1A1A18),
+    surfaceContainerHigh = Color(0xFF1A1A18),
+    surfaceContainerHighest = Color(0xFF262624),
+    outline = TintaClara,
+    outlineVariant = Color(0xFF3D3D39),
+    error = Color(0xFFFF7566),
+    onError = Noite,
+    errorContainer = Vermelho,
+    onErrorContainer = Color.White,
+    inverseSurface = TintaClara,
+    inverseOnSurface = Noite,
+    inversePrimary = Color(0xFF8A6400),
 )
 
-/** Cor de um estado (semáforo, severidade): o tom forte e o fundo suave do mesmo matiz. */
+/**
+ * Cor de um estado (semáforo, severidade). [forte] é o tom para texto e ícone sobre o fundo da tela;
+ * [fundo] preenche a linha inteira quando o estado pede ação, com [sobreFundo] e [suave] por cima.
+ */
 @Immutable
-data class CorDeEstado(val forte: Color, val fundo: Color, val sobreFundo: Color)
+data class CorDeEstado(val forte: Color, val fundo: Color, val sobreFundo: Color, val suave: Color)
 
 @Immutable
 data class CoresDeEstado(
@@ -77,27 +111,85 @@ data class CoresDeEstado(
     val neutro: CorDeEstado,
 )
 
+private val SobreAmarelo = Color(0xFF1C1500)
+
 private val EstadosClaro = CoresDeEstado(
-    ok = CorDeEstado(Color(0xFF1E8E3E), Color(0xFFE2F4E7), Color(0xFF0D4A1F)),
-    atencao = CorDeEstado(Color(0xFFE8A200), Color(0xFFFFF2CC), Color(0xFF5C4100)),
-    critico = CorDeEstado(Color(0xFFD12D22), Color(0xFFFCE4E1), Color(0xFF6E130D)),
-    neutro = CorDeEstado(Color(0xFF8A9297), Color(0xFFE9EEF1), Color(0xFF3A4247)),
+    // O que está em ordem fica quieto: sem preenchimento, só a tinta da tela.
+    ok = CorDeEstado(Color(0xFF17703A), Color.Transparent, Tinta, Color(0xFF55554F)),
+    atencao = CorDeEstado(Color(0xFF7A5800), Amarelo, SobreAmarelo, SobreAmarelo),
+    critico = CorDeEstado(Vermelho, Vermelho, Color.White, Color.White),
+    neutro = CorDeEstado(Color(0xFF55554F), Color.Transparent, Tinta, Color(0xFF55554F)),
 )
 
 private val EstadosEscuro = CoresDeEstado(
-    ok = CorDeEstado(Color(0xFF5BD07A), Color(0xFF12381D), Color(0xFFBDEFCA)),
-    atencao = CorDeEstado(Color(0xFFFFC53D), Color(0xFF453200), Color(0xFFFFE6A3)),
-    critico = CorDeEstado(Color(0xFFFF6B5E), Color(0xFF5A130E), Color(0xFFFFD2CD)),
-    neutro = CorDeEstado(Color(0xFF8A9297), Color(0xFF2A3136), Color(0xFFC0C8CD)),
+    ok = CorDeEstado(Color(0xFF5BD07A), Color.Transparent, TintaClara, Color(0xFFB0B0A8)),
+    atencao = CorDeEstado(Amarelo, Amarelo, SobreAmarelo, SobreAmarelo),
+    critico = CorDeEstado(Color(0xFFFF7566), Vermelho, Color.White, Color.White),
+    neutro = CorDeEstado(Color(0xFFB0B0A8), Color.Transparent, TintaClara, Color(0xFFB0B0A8)),
 )
 
 val LocalCoresDeEstado = staticCompositionLocalOf { EstadosClaro }
 
+/** Archivo (SIL OFL 1.1, ver licencas/Archivo-OFL.txt) em três papéis: texto, título e número. */
+private val Texto = FontFamily(
+    Font(R.font.archivo_regular, FontWeight.Normal),
+    Font(R.font.archivo_medium, FontWeight.Medium),
+    Font(R.font.archivo_bold, FontWeight.Bold),
+)
+
+/** Corte largo e pesado, para o nome da tela. */
+private val Titulo = FontFamily(Font(R.font.archivo_display, FontWeight.ExtraBold))
+
+/** Corte estreito e pesado: temperaturas e pesos cabem grandes sem quebrar a linha. */
+val FonteDeNumeros = FontFamily(Font(R.font.archivo_numeros, FontWeight.ExtraBold))
+
+private fun titulo(tamanho: Int, linha: Int) =
+    TextStyle(fontFamily = Titulo, fontWeight = FontWeight.ExtraBold, fontSize = tamanho.sp, lineHeight = linha.sp)
+
+private fun texto(tamanho: Int, linha: Int, peso: FontWeight = FontWeight.Normal) =
+    TextStyle(fontFamily = Texto, fontWeight = peso, fontSize = tamanho.sp, lineHeight = linha.sp)
+
+private val Tipografia = Typography(
+    displayLarge = titulo(48, 52),
+    displayMedium = titulo(40, 44),
+    displaySmall = titulo(34, 38),
+    headlineLarge = titulo(30, 34),
+    headlineMedium = titulo(26, 30),
+    headlineSmall = titulo(22, 26),
+    titleLarge = titulo(21, 26),
+    titleMedium = texto(17, 22, FontWeight.Bold),
+    titleSmall = texto(15, 20, FontWeight.Bold),
+    bodyLarge = texto(16, 23),
+    bodyMedium = texto(14, 20),
+    bodySmall = texto(13, 18),
+    labelLarge = texto(15, 20, FontWeight.Bold),
+    labelMedium = texto(13, 18, FontWeight.Medium),
+    labelSmall = texto(12, 16, FontWeight.Medium),
+)
+
+/** Cantos quase retos em tudo: botão, campo, diálogo. Nada de pílula. */
+private val Formas = Shapes(
+    extraSmall = RoundedCornerShape(2.dp),
+    small = RoundedCornerShape(4.dp),
+    medium = RoundedCornerShape(4.dp),
+    large = RoundedCornerShape(6.dp),
+    extraLarge = RoundedCornerShape(8.dp),
+)
+
 @Composable
-fun FrioSolidarioTema(escuro: Boolean = isSystemInDarkTheme(), conteudo: @Composable () -> Unit) {
-    androidx.compose.runtime.CompositionLocalProvider(
-        LocalCoresDeEstado provides if (escuro) EstadosEscuro else EstadosClaro,
-    ) {
-        MaterialTheme(colorScheme = if (escuro) Escuro else Claro, content = conteudo)
+// O app é sempre claro, mesmo com o sistema em modo noturno (decisão do Kevin em 15/11/2026): a
+// tela é lida em ambiente iluminado e o preenchimento vermelho e amarelo foi pensado sobre papel.
+// A paleta escura fica definida para o caso de a decisão mudar; hoje ninguém a seleciona.
+fun FrioSolidarioTema(escuro: Boolean = false, conteudo: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalCoresDeEstado provides if (escuro) EstadosEscuro else EstadosClaro) {
+        MaterialTheme(
+            colorScheme = if (escuro) Escuro else Claro,
+            typography = Tipografia,
+            shapes = Formas,
+            content = conteudo,
+        )
     }
 }
+
+/** Botões do Material nascem em pílula; aqui seguem o canto quase reto do resto da tela. */
+val FormaDoBotao = RoundedCornerShape(4.dp)

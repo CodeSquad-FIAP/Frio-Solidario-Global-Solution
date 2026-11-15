@@ -1,12 +1,9 @@
 package br.com.fiap.friosolidario.ui.comum
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
@@ -47,19 +44,17 @@ val Semaforo.icone: ImageVector
         Semaforo.SEM_SINAL -> Icons.Outlined.SensorsOff
     }
 
-/** Etiqueta colorida com ícone e texto, usada para o semáforo e para a severidade do alerta. */
+/**
+ * Palavra de estado em tinta forte, com ícone, para usar sobre o fundo da tela (lote "Perdido",
+ * alerta "Resolvido"). Dentro de uma linha já preenchida pela cor do estado, usa-se texto comum.
+ */
 @Composable
 fun Etiqueta(texto: String, cores: CorDeEstado, modifier: Modifier = Modifier, icone: ImageVector? = null) {
-    Row(
-        modifier
-            .background(cores.fundo, RoundedCornerShape(50))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         if (icone != null) {
             Icon(icone, contentDescription = null, tint = cores.forte, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
         }
-        Text(texto, style = MaterialTheme.typography.labelLarge, color = cores.sobreFundo)
+        Text(texto, style = MaterialTheme.typography.labelLarge, color = cores.forte)
     }
 }

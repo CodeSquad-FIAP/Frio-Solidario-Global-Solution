@@ -17,6 +17,9 @@ private val DIA = DateTimeFormatter.ofPattern("dd/MM/yyyy", PT_BR)
 // grande a quebra de linha nunca deixa "°C" ou "kg" sozinho na linha de baixo.
 fun temperatura(valor: Double): String = String.format(PT_BR, "%.1f\u00A0°C", valor)
 
+/** Temperatura sem a unidade por extenso ("-12,5°"), para o número grande ao lado do nome. */
+fun grau(valor: Double): String = String.format(PT_BR, "%.1f°", valor)
+
 fun umidade(valor: Double): String = String.format(PT_BR, "%.0f%%", valor)
 
 fun quilos(valor: Double): String = String.format(PT_BR, "%.1f\u00A0kg", valor)

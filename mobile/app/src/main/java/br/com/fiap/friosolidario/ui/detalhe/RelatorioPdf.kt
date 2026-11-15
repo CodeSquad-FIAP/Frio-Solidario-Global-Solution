@@ -1,5 +1,6 @@
 package br.com.fiap.friosolidario.ui.detalhe
 
+import br.com.fiap.friosolidario.ui.tema.FormaDoBotao
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ClipData
@@ -78,7 +79,7 @@ fun BotaoDeRelatorio(equipamento: EquipamentoDto) {
     val viewModel = vm(key = "relatorio-${equipamento.id}") { RelatorioViewModel(equipamento.id, it.relatorios) }
     val estado by viewModel.estado.collectAsStateWithLifecycle()
 
-    OutlinedButton(onClick = viewModel::abrir, modifier = Modifier.fillMaxWidth()) {
+    OutlinedButton(shape = FormaDoBotao, onClick = viewModel::abrir, modifier = Modifier.fillMaxWidth()) {
         Icon(Icons.Outlined.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
         Text("Relatório em PDF")
@@ -148,10 +149,10 @@ private fun DialogoDoRelatorio(
                     }
                     if (estado.opcao == OpcaoDePeriodo.ESCOLHER) {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = { dataEmEdicao = DataEmEdicao.DE }, enabled = !estado.baixando) {
+                            OutlinedButton(shape = FormaDoBotao, onClick = { dataEmEdicao = DataEmEdicao.DE }, enabled = !estado.baixando) {
                                 Text("De ${dia(estado.de)}")
                             }
-                            OutlinedButton(onClick = { dataEmEdicao = DataEmEdicao.ATE }, enabled = !estado.baixando) {
+                            OutlinedButton(shape = FormaDoBotao, onClick = { dataEmEdicao = DataEmEdicao.ATE }, enabled = !estado.baixando) {
                                 Text("Até ${dia(estado.ate)}")
                             }
                         }
@@ -169,12 +170,12 @@ private fun DialogoDoRelatorio(
                     )
                     Spacer(Modifier.height(16.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { avisoDoAparelho = compartilhar(contexto, arquivo) }) {
+                        Button(shape = FormaDoBotao, onClick = { avisoDoAparelho = compartilhar(contexto, arquivo) }) {
                             Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("Compartilhar")
                         }
-                        OutlinedButton(onClick = { avisoDoAparelho = imprimir(contexto, arquivo) }) {
+                        OutlinedButton(shape = FormaDoBotao, onClick = { avisoDoAparelho = imprimir(contexto, arquivo) }) {
                             Icon(Icons.Outlined.Print, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("Imprimir")
@@ -189,7 +190,7 @@ private fun DialogoDoRelatorio(
         },
         confirmButton = {
             if (arquivo == null) {
-                Button(onClick = aoGerar, enabled = !estado.baixando && estado.erroDoPeriodo == null) {
+                Button(shape = FormaDoBotao, onClick = aoGerar, enabled = !estado.baixando && estado.erroDoPeriodo == null) {
                     if (estado.baixando) {
                         CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
@@ -201,7 +202,7 @@ private fun DialogoDoRelatorio(
             }
         },
         dismissButton = {
-            TextButton(onClick = aoFechar, enabled = !estado.baixando) { Text(if (arquivo != null) "Fechar" else "Cancelar") }
+            TextButton(shape = FormaDoBotao, onClick = aoFechar, enabled = !estado.baixando) { Text(if (arquivo != null) "Fechar" else "Cancelar") }
         },
     )
 
@@ -213,7 +214,7 @@ private fun DialogoDoRelatorio(
         DatePickerDialog(
             onDismissRequest = { dataEmEdicao = null },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(shape = FormaDoBotao, onClick = {
                     seletor.selectedDateMillis?.let { millis ->
                         val data = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
                         if (qual == DataEmEdicao.DE) aoMudarDe(data) else aoMudarAte(data)
@@ -221,7 +222,7 @@ private fun DialogoDoRelatorio(
                     dataEmEdicao = null
                 }) { Text("Confirmar") }
             },
-            dismissButton = { TextButton(onClick = { dataEmEdicao = null }) { Text("Cancelar") } },
+            dismissButton = { TextButton(shape = FormaDoBotao, onClick = { dataEmEdicao = null }) { Text("Cancelar") } },
         ) {
             DatePicker(state = seletor)
         }

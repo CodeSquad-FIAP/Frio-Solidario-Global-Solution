@@ -1,5 +1,6 @@
 package br.com.fiap.friosolidario.ui.lotes
 
+import br.com.fiap.friosolidario.ui.tema.FormaDoBotao
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -139,7 +140,7 @@ fun LoteFormScreen(aoVoltar: () -> Unit, aoSalvar: () -> Unit) {
         DatePickerDialog(
             onDismissRequest = { escolhendoData = false },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(shape = FormaDoBotao, onClick = {
                     // O seletor devolve meia-noite UTC do dia escolhido.
                     viewModel.mudarValidade(
                         seletor.selectedDateMillis?.let { Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() },
@@ -147,7 +148,7 @@ fun LoteFormScreen(aoVoltar: () -> Unit, aoSalvar: () -> Unit) {
                     escolhendoData = false
                 }) { Text("Confirmar") }
             },
-            dismissButton = { TextButton(onClick = { escolhendoData = false }) { Text("Cancelar") } },
+            dismissButton = { TextButton(shape = FormaDoBotao, onClick = { escolhendoData = false }) { Text("Cancelar") } },
         ) {
             DatePicker(state = seletor)
         }

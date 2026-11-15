@@ -9,6 +9,12 @@ class FormatosTest {
     private val agora = Instant.parse("2026-11-15T12:00:00Z")
 
     @Test
+    fun `grau e a temperatura curta, para o numero grande da linha`() {
+        assertEquals("7,6°", grau(7.6))
+        assertEquals("-18,0°", grau(-18.0))
+    }
+
+    @Test
     fun `temperatura usa virgula e uma casa`() {
         // Espaço inseparável: o número nunca fica em uma linha e a unidade na outra.
         assertEquals("7,6\u00A0°C", temperatura(7.6))

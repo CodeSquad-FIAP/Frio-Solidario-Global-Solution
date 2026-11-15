@@ -1,5 +1,13 @@
 package br.com.fiap.friosolidario.ui.alertas
 
+import br.com.fiap.friosolidario.ui.tema.FormaDoBotao
+import androidx.compose.foundation.layout.statusBarsPadding
+import br.com.fiap.friosolidario.ui.comum.CabecalhoDaTela
+import br.com.fiap.friosolidario.ui.comum.LinhaSinal
+import br.com.fiap.friosolidario.ui.comum.BotaoDaLinha
+import br.com.fiap.friosolidario.ui.comum.Fio
+import br.com.fiap.friosolidario.ui.comum.MargemDaTela
+import br.com.fiap.friosolidario.ui.comum.corSuave
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -82,7 +90,7 @@ private const val INTERVALO_DOS_ALERTAS_MS = 10_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AlertasScreen(aoVoltar: () -> Unit, aoAbrirEquipamento: (Long) -> Unit) {
+fun AlertasScreen(aoAbrirEquipamento: (Long) -> Unit) {
     val viewModel = vm { AlertasViewModel(it.alertas) }
     val estado by viewModel.estado.collectAsStateWithLifecycle()
     val agora by agoraQueAnda()
@@ -99,15 +107,17 @@ fun AlertasScreen(aoVoltar: () -> Unit, aoAbrirEquipamento: (Long) -> Unit) {
     Scaffold(
         topBar = {
             Column {
-                TopAppBar(
-                    title = { Text("Alertas") },
-                    navigationIcon = {
-                        IconButton(onClick = aoVoltar) {
-                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Voltar")
-                        }
+                CabecalhoDaTela(
+                    titulo = "Alertas",
+                    subtitulo = when (val abertos = listas?.abertos?.size) {
+                        null -> null
+                        0 -> "Nenhum aberto"
+                        1 -> "1 aberto, esperando ação"
+                        else -> "$abertos abertos, esperando ação"
                     },
+                    modifier = Modifier.statusBarsPadding(),
                 )
-                PrimaryTabRow(selectedTabIndex = estado.aba.ordinal) {
+                PrimaryTabRow(selectedTabIndex = estado.aba.ordinal, containerColor = MaterialTheme.colorScheme.background) {
                     AbaDeAlertas.entries.forEach { aba ->
                         val quantidade = listas?.abertos?.size?.takeIf { aba == AbaDeAlertas.ABERTOS && it > 0 }
                         Tab(
@@ -138,29 +148,33 @@ fun AlertasScreen(aoVoltar: () -> Unit, aoAbrirEquipamento: (Long) -> Unit) {
                             ListaVazia(
                                 "Nenhum alerta aberto",
                                 detalhe = "Os equipamentos estão dentro da faixa ou os alertas já foram tratados.",
-                                icone = Icons.Outlined.CheckCircle,
                             )
                         } else {
                             ListaVazia(
                                 "Nenhum alerta resolvido ainda",
                                 detalhe = "Os alertas tratados ficam registrados aqui, com a ação tomada.",
-                                icone = Icons.Outlined.History,
                             )
                         }
                     } else {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                             LazyColumn(
-                                contentPadding = PaddingValues(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                contentPadding = PaddingValues(bottom = 24.dp),
                                 modifier = Modifier
                                     .widthIn(max = 720.dp)
                                     .fillMaxSize(),
                             ) {
                                 estado.erroAoAtualizar?.let { erro ->
-                                    item { FaixaDeErro(erro, aoTentar = viewModel::puxarParaAtualizar) }
+                                    item {
+                                        FaixaDeErro(
+                                            erro,
+                                            aoTentar = viewModel::puxarParaAtualizar,
+                                            modifier = Modifier.padding(horizontal = MargemDaTela, vertical = 12.dp),
+                                        )
+                                        Fio()
+                                    }
                                 }
                                 items(itens, key = { it.id }) { alerta ->
-                                    CartaoDoAlerta(
+                                    LinhaDoAlerta(
                                         alerta = alerta,
                                         agora = agora,
                                         aoResolver = { viewModel.abrirResolucao(alerta) },
@@ -195,16 +209,12 @@ private fun Severidade.cores(): CorDeEstado = with(LocalCoresDeEstado.current) {
     }
 }
 
-private val Severidade.icone: ImageVector
-    get() = when (this) {
-        Severidade.CRITICA, Severidade.ALTA -> Icons.Filled.Error
-        Severidade.MEDIA -> Icons.Filled.Warning
-        Severidade.BAIXA -> Icons.Outlined.Info
-    }
-
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * Alerta aberto: a linha inteira leva a cor da severidade e traz o botão de resolver. Resolvido:
+ * linha sem cor, com o que foi feito.
+ */
 @Composable
-private fun CartaoDoAlerta(
+private fun LinhaDoAlerta(
     alerta: AlertaDto,
     agora: Instant,
     aoResolver: () -> Unit,
@@ -212,52 +222,33 @@ private fun CartaoDoAlerta(
     modifier: Modifier = Modifier,
 ) {
     val resolvidoEm = alerta.resolvidoEm
-    Card(
-        onClick = aoAbrirEquipamento,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                itemVerticalAlignment = Alignment.CenterVertically,
-            ) {
-                Etiqueta("Severidade ${alerta.severidade.rotulo.lowercase()}", alerta.severidade.cores(), icone = alerta.severidade.icone)
-                if (resolvidoEm != null) {
-                    Etiqueta("Resolvido", LocalCoresDeEstado.current.ok, icone = Icons.Outlined.CheckCircle)
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            Text(alerta.tipo.rotulo, style = MaterialTheme.typography.titleMedium)
+    val cores = if (resolvidoEm == null) alerta.severidade.cores() else LocalCoresDeEstado.current.neutro
+    LinhaSinal(cores, modifier, aoClicar = aoAbrirEquipamento, rotuloDoClique = "Abrir o equipamento") {
+        Text(alerta.tipo.rotulo, style = MaterialTheme.typography.titleLarge)
+        Text(alerta.equipamento.ifBlank { "Equipamento ${alerta.equipamentoId}" }, style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.height(6.dp))
+        if (resolvidoEm == null) {
             Text(
-                alerta.equipamento.ifBlank { "Equipamento ${alerta.equipamentoId}" },
-                style = MaterialTheme.typography.bodyLarge,
+                "Severidade ${alerta.severidade.rotulo.lowercase()} · aberto ${tempoDecorrido(alerta.criadoEm, agora)} · " +
+                    diaEHora(alerta.criadoEm),
+                style = MaterialTheme.typography.bodyMedium,
+                color = corSuave(),
             )
-            Spacer(Modifier.height(4.dp))
-
-            if (resolvidoEm == null) {
-                Text(
-                    "Aberto ${tempoDecorrido(alerta.criadoEm, agora)} · ${diaEHora(alerta.criadoEm)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(12.dp))
-                Button(onClick = aoResolver, modifier = Modifier.align(Alignment.End)) { Text("Resolver") }
-            } else {
-                Text(
-                    "Resolvido ${tempoDecorrido(resolvidoEm, agora)} · ${diaEHora(resolvidoEm)} · " +
-                        "ficou aberto por ${duracao(alerta.criadoEm, resolvidoEm)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    alerta.acaoTomada?.let { "Ação tomada: ${it.rotulo.lowercase()}" } ?: "Ação tomada: não informada",
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            }
+            Spacer(Modifier.height(12.dp))
+            BotaoDaLinha("Resolver", cores, aoResolver, Modifier.fillMaxWidth())
+        } else {
+            Text(
+                alerta.acaoTomada?.let { "Ação tomada: ${it.rotulo.lowercase()}" } ?: "Ação tomada: não informada",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                "Resolvido ${tempoDecorrido(resolvidoEm, agora)} · ${diaEHora(resolvidoEm)} · " +
+                    "ficou aberto por ${duracao(alerta.criadoEm, resolvidoEm)} · " +
+                    "severidade ${alerta.severidade.rotulo.lowercase()}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = corSuave(),
+            )
         }
     }
 }
@@ -318,7 +309,7 @@ private fun DialogoDeResolucao(
             }
         },
         confirmButton = {
-            Button(onClick = aoConfirmar, enabled = resolucao.acao != null && !resolucao.enviando) {
+            Button(shape = FormaDoBotao, onClick = aoConfirmar, enabled = resolucao.acao != null && !resolucao.enviando) {
                 if (resolucao.enviando) {
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
@@ -329,7 +320,7 @@ private fun DialogoDeResolucao(
             }
         },
         dismissButton = {
-            TextButton(onClick = aoFechar, enabled = !resolucao.enviando) { Text("Cancelar") }
+            TextButton(shape = FormaDoBotao, onClick = aoFechar, enabled = !resolucao.enviando) { Text("Cancelar") }
         },
     )
 }

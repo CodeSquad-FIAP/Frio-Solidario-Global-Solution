@@ -1,5 +1,19 @@
 package br.com.fiap.friosolidario.ui.lotes
 
+import br.com.fiap.friosolidario.ui.tema.FormaDoBotao
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import br.com.fiap.friosolidario.ui.tema.FonteDeNumeros
+import br.com.fiap.friosolidario.ui.comum.CabecalhoDaTela
+import br.com.fiap.friosolidario.ui.comum.LinhaSinal
+import br.com.fiap.friosolidario.ui.comum.Fio
+import br.com.fiap.friosolidario.ui.comum.MargemDaTela
+import br.com.fiap.friosolidario.ui.comum.corSuave
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -70,7 +84,7 @@ import br.com.fiap.friosolidario.ui.tema.LocalCoresDeEstado
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LotesScreen(sessao: Sessao, aoVoltar: () -> Unit, aoNovoLote: () -> Unit) {
+fun LotesScreen(sessao: Sessao, aoNovoLote: () -> Unit) {
     val viewModel = vm { LotesViewModel(it.lotes) }
     val estado by viewModel.estado.collectAsStateWithLifecycle()
     val avisos = remember { SnackbarHostState() }
@@ -86,13 +100,10 @@ fun LotesScreen(sessao: Sessao, aoVoltar: () -> Unit, aoNovoLote: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Lotes doados") },
-                navigationIcon = {
-                    IconButton(onClick = aoVoltar) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Voltar")
-                    }
-                },
+            CabecalhoDaTela(
+                titulo = "Lotes doados",
+                subtitulo = (estado.tela as? EstadoTela.Conteudo)?.valor?.takeIf { it.isNotEmpty() }?.let(::balanco),
+                modifier = Modifier.statusBarsPadding(),
             )
         },
         floatingActionButton = {
@@ -101,6 +112,8 @@ fun LotesScreen(sessao: Sessao, aoVoltar: () -> Unit, aoNovoLote: () -> Unit) {
                     onClick = aoNovoLote,
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                     text = { Text("Lote") },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                 )
             }
         },
@@ -125,23 +138,27 @@ fun LotesScreen(sessao: Sessao, aoVoltar: () -> Unit, aoNovoLote: () -> Unit) {
                             } else {
                                 "O administrador da instituição registra as doações que chegam."
                             },
-                            icone = Icons.Outlined.Inventory2,
                         )
                     } else {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                             LazyColumn(
-                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = if (sessao.ehAdmin) 96.dp else 24.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                contentPadding = PaddingValues(bottom = if (sessao.ehAdmin) 96.dp else 24.dp),
                                 modifier = Modifier
                                     .widthIn(max = 720.dp)
                                     .fillMaxSize(),
                             ) {
                                 estado.erroAoAtualizar?.let { erro ->
-                                    item { FaixaDeErro(erro, aoTentar = viewModel::puxarParaAtualizar) }
+                                    item {
+                                        FaixaDeErro(
+                                            erro,
+                                            aoTentar = viewModel::puxarParaAtualizar,
+                                            modifier = Modifier.padding(horizontal = MargemDaTela, vertical = 12.dp),
+                                        )
+                                        Fio()
+                                    }
                                 }
-                                item { Indicadores(tela.valor) }
                                 items(tela.valor, key = { it.id }) { lote ->
-                                    CartaoDoLote(lote, podeRegistrarSaida = sessao.ehAdmin, aoPedirSaida = { viewModel.pedirSaida(lote, it) })
+                                    LinhaDoLote(lote, podeRegistrarSaida = sessao.ehAdmin, aoPedirSaida = { viewModel.pedirSaida(lote, it) })
                                 }
                             }
                         }
@@ -170,7 +187,7 @@ fun LotesScreen(sessao: Sessao, aoVoltar: () -> Unit, aoNovoLote: () -> Unit) {
                 }
             },
             confirmButton = {
-                Button(onClick = viewModel::confirmarSaida, enabled = !saida.enviando) {
+                Button(shape = FormaDoBotao, onClick = viewModel::confirmarSaida, enabled = !saida.enviando) {
                     if (saida.enviando) {
                         CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
@@ -178,7 +195,7 @@ fun LotesScreen(sessao: Sessao, aoVoltar: () -> Unit, aoNovoLote: () -> Unit) {
                     Text(if (saida.erro != null) "Tentar de novo" else "Confirmar")
                 }
             },
-            dismissButton = { TextButton(onClick = viewModel::cancelarSaida, enabled = !saida.enviando) { Text("Cancelar") } },
+            dismissButton = { TextButton(shape = FormaDoBotao, onClick = viewModel::cancelarSaida, enabled = !saida.enviando) { Text("Cancelar") } },
         )
     }
 }
@@ -192,68 +209,52 @@ private fun StatusLote.cores(): CorDeEstado = with(LocalCoresDeEstado.current) {
     }
 }
 
-/** Quilos por situação, somados da lista da API: o que chegou, o que foi salvo e o que se perdeu. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun Indicadores(lotes: List<LoteDto>) {
-    FlowRow(
-        Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(16.dp))
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(28.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        StatusLote.entries.forEach { status ->
-            Column {
-                Text(
-                    when (status) {
-                        StatusLote.DISPONIVEL -> "Em estoque"
-                        StatusLote.DISTRIBUIDO -> "Distribuídos"
-                        StatusLote.PERDIDO -> "Perdidos"
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(quilos(lotes.filter { it.status == status }.sumOf { it.kg }), style = MaterialTheme.typography.titleLarge)
-            }
-        }
-    }
+/** Quilos por situação, somados da lista da API: o que está guardado, o que foi salvo e o que se perdeu. */
+private fun balanco(lotes: List<LoteDto>): String {
+    fun soma(status: StatusLote) = quilos(lotes.filter { it.status == status }.sumOf { it.kg })
+    return "${soma(StatusLote.DISPONIVEL)} em estoque · ${soma(StatusLote.DISTRIBUIDO)} distribuídos · " +
+        "${soma(StatusLote.PERDIDO)} perdidos"
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun CartaoDoLote(lote: LoteDto, podeRegistrarSaida: Boolean, aoPedirSaida: (StatusLote) -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Etiqueta(lote.status.rotulo, lote.status.cores())
-            Spacer(Modifier.height(10.dp))
-            Text(lote.descricao, style = MaterialTheme.typography.titleMedium)
-            Text(
-                "${lote.categoria.lowercase().replaceFirstChar { it.titlecase() }} · ${quilos(lote.kg)}",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Spacer(Modifier.height(4.dp))
-            val retiradoEm = lote.retiradoEm
-            Text(
-                if (retiradoEm == null) {
-                    "Validade ${dia(lote.validade)} · ${prazoDeValidade(lote.validade)}"
-                } else {
-                    "Saiu do estoque em ${diaEHora(retiradoEm)} · validade ${dia(lote.validade)}"
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (lote.status == StatusLote.DISPONIVEL && podeRegistrarSaida) {
-                Spacer(Modifier.height(12.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { aoPedirSaida(StatusLote.DISTRIBUIDO) }) { Text("Distribuído") }
-                    OutlinedButton(onClick = { aoPedirSaida(StatusLote.PERDIDO) }) { Text("Perdido") }
+private fun LinhaDoLote(lote: LoteDto, podeRegistrarSaida: Boolean, aoPedirSaida: (StatusLote) -> Unit) {
+    LinhaSinal(LocalCoresDeEstado.current.neutro) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(lote.descricao, style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(2.dp))
+                val retiradoEm = lote.retiradoEm
+                Text(
+                    buildString {
+                        append(lote.categoria.lowercase().replaceFirstChar { it.titlecase() })
+                        if (retiradoEm == null) {
+                            append(" · validade ${dia(lote.validade)} · ${prazoDeValidade(lote.validade)}")
+                        } else {
+                            append(" · saiu em ${diaEHora(retiradoEm)} · validade ${dia(lote.validade)}")
+                        }
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = corSuave(),
+                )
+                if (lote.status != StatusLote.DISPONIVEL) {
+                    Spacer(Modifier.height(6.dp))
+                    Etiqueta(lote.status.rotulo, lote.status.cores())
                 }
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(
+                quilos(lote.kg),
+                style = TextStyle(fontFamily = FonteDeNumeros, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp),
+                color = if (lote.status == StatusLote.DISPONIVEL) LocalContentColor.current else corSuave(),
+                maxLines = 1,
+            )
+        }
+        if (lote.status == StatusLote.DISPONIVEL && podeRegistrarSaida) {
+            Spacer(Modifier.height(12.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(shape = FormaDoBotao, onClick = { aoPedirSaida(StatusLote.DISTRIBUIDO) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Distribuído") }
+                OutlinedButton(shape = FormaDoBotao, onClick = { aoPedirSaida(StatusLote.PERDIDO) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Perdido") }
             }
         }
     }

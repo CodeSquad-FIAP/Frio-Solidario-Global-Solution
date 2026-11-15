@@ -1,5 +1,6 @@
 package br.com.fiap.friosolidario.ui.cadastro
 
+import br.com.fiap.friosolidario.ui.tema.FormaDoBotao
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,7 +63,7 @@ fun EquipamentoFormScreen(sessao: Sessao, aoVoltar: () -> Unit, aoSalvar: () -> 
                         selected = estado.tipo == tipo,
                         onClick = { viewModel.mudarTipo(tipo) },
                         enabled = !estado.enviando,
-                        shape = SegmentedButtonDefaults.itemShape(indice, TipoEquipamento.entries.size),
+                        shape = SegmentedButtonDefaults.itemShape(indice, TipoEquipamento.entries.size, baseShape = FormaDoBotao),
                         icon = {},
                     ) { Text(tipo.rotulo, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }

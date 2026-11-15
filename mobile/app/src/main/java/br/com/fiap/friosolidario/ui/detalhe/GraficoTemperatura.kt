@@ -51,7 +51,7 @@ fun GraficoTemperatura(
     val corDoFundo = MaterialTheme.colorScheme.surface
     val corDoTexto = MaterialTheme.colorScheme.onSurfaceVariant
     val estiloDoEixo = MaterialTheme.typography.labelSmall.copy(color = corDoTexto)
-    val estiloDoLimite = MaterialTheme.typography.labelSmall.copy(color = estados.critico.sobreFundo)
+    val estiloDoLimite = MaterialTheme.typography.labelSmall.copy(color = estados.critico.forte)
 
     val escala = remember(leituras, equipamento, inicio, fim) {
         escalaPara(leituras, equipamento.tempMin, equipamento.tempMax, inicio, fim)

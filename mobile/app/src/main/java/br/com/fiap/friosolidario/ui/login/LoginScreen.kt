@@ -1,5 +1,7 @@
 package br.com.fiap.friosolidario.ui.login
 
+import br.com.fiap.friosolidario.ui.tema.FormaDoBotao
+import br.com.fiap.friosolidario.ui.tema.LocalCoresDeEstado
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -96,37 +98,22 @@ private fun LoginConteudo(
                 .padding(horizontal = 24.dp, vertical = 32.dp)
                 .widthIn(max = 420.dp)
                 .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(
-                Modifier
-                    .size(72.dp)
-                    .background(MaterialTheme.colorScheme.primary, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Filled.AcUnit,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(40.dp),
-                )
-            }
-            Spacer(Modifier.height(20.dp))
-            Text("Frio Solidário", style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.height(4.dp))
+            Text("Frio Solidário", style = MaterialTheme.typography.displayMedium)
+            Spacer(Modifier.height(8.dp))
             Text(
-                "Cadeia de frio dos alimentos doados",
-                style = MaterialTheme.typography.bodyMedium,
+                "Temperatura dos alimentos doados, equipamento por equipamento.",
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(32.dp))
 
             if (sessaoExpirou && estado.erro == null && estado.erroDeCampo == null) {
+                val aviso = LocalCoresDeEstado.current.atencao
                 Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    shape = RoundedCornerShape(12.dp),
+                    color = aviso.fundo,
+                    contentColor = aviso.sobreFundo,
+                    shape = MaterialTheme.shapes.small,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -196,7 +183,7 @@ private fun LoginConteudo(
             }
 
             Spacer(Modifier.height(8.dp))
-            Button(
+            Button(shape = FormaDoBotao,
                 onClick = {
                     foco.clearFocus()
                     aoEntrar()
