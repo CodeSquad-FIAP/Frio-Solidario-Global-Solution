@@ -34,4 +34,14 @@ class FormatosTest {
     fun `relogio do sensor adiantado nao mostra tempo negativo`() {
         assertEquals("agora", tempoDecorrido(agora.plusSeconds(90), agora))
     }
+
+    @Test
+    fun `duracao entre a abertura e a resolucao do alerta`() {
+        assertEquals("menos de 1 min", duracao(agora, agora.plusSeconds(40)))
+        assertEquals("17 min", duracao(agora, agora.plusSeconds(17 * 60 + 30)))
+        assertEquals("2 h 5 min", duracao(agora, agora.plusSeconds(2 * 3600 + 5 * 60)))
+        assertEquals("3 h", duracao(agora, agora.plusSeconds(3 * 3600)))
+        assertEquals("2 dias 4 h", duracao(agora, agora.plusSeconds(2 * 86400L + 4 * 3600)))
+        assertEquals("menos de 1 min", duracao(agora, agora.minusSeconds(60)))
+    }
 }

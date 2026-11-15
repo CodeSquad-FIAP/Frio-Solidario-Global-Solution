@@ -40,3 +40,17 @@ fun tempoDecorrido(de: Instant, agora: Instant = Instant.now()): String {
         else -> "há ${minutos / (60 * 24)} dias"
     }
 }
+
+/** "17 min", "2 h 5 min", "2 dias 4 h": quanto tempo um alerta ficou aberto. */
+fun duracao(de: Instant, ate: Instant): String {
+    val minutos = Duration.between(de, ate).toMinutes()
+    val dias = minutos / (60 * 24)
+    val horas = minutos / 60 % 24
+    val resto = minutos % 60
+    return when {
+        minutos < 1 -> "menos de 1 min"
+        dias > 0 -> listOfNotNull(if (dias == 1L) "1 dia" else "$dias dias", "$horas h".takeIf { horas > 0 }).joinToString(" ")
+        horas > 0 -> listOfNotNull("$horas h", "$resto min".takeIf { resto > 0 }).joinToString(" ")
+        else -> "$resto min"
+    }
+}
