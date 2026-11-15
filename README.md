@@ -57,7 +57,7 @@ dotnet test --filter Caso=5   # menos de 3 leituras fora da faixa não abrem ale
 dotnet test --filter Caso=6   # 3 leituras seguidas abrem 1 alerta, sem duplicar
 ```
 
-São **60 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
+São **63 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
 severidade por desvio), o fluxo do `POST /api/leituras` com repositórios em memória
 (`LeituraServiceTests`: um alerta aberto por tipo, sem duplicar) e a API por HTTP (`ApiTests`: 401 sem
 token, casos 5 e 6, a rota `/instituicoes/{id}/equipamentos` e o DELETE lógico do equipamento). Os
@@ -137,6 +137,7 @@ equipamento no cadastro muda o comportamento sem tocar em código.
 | POST | `/api/auth/login` | autentica e devolve o token (pública; 10 tentativas/min por IP) |
 | POST | `/api/leituras` | registra leitura do sensor e devolve os alertas que ela abriu |
 | GET | `/api/equipamentos/{id}/leituras?periodo=24h\|7d` | série do gráfico (24h por padrão) |
+| GET | `/api/equipamentos/{id}/leituras/ultima` | leitura mais recente, de quando for (painel do app); 204 se o equipamento nunca enviou |
 | GET | `/api/alertas?status=ABERTO&equipamentoId=` | fila de alertas da instituição do token, mais grave primeiro |
 | PATCH | `/api/alertas/{id}/resolver` | resolve o alerta com o usuário do token (só da própria instituição); corpo opcional `{"acao":"AJUSTOU"}` grava a ação tomada |
 | GET | `/api/lotes?status=` | lotes doados da instituição do token, por validade (o que vence primeiro) |
@@ -333,7 +334,7 @@ do relatório, todas lendo e gravando pela API — não há dado fixo no app:
 | Tela | O que faz | Rotas da API |
 |---|---|---|
 | Login | e-mail e senha; guarda o token até o logout ou o 401 | `POST /api/auth/login` |
-| Painel | equipamentos ativos com semáforo e horário da última leitura; atualiza a cada 15 s | `GET /api/equipamentos?ativo=true`, `GET /api/equipamentos/{id}/leituras` |
+| Painel | equipamentos ativos com semáforo e horário da última leitura; atualiza a cada 15 s | `GET /api/equipamentos?ativo=true`, `GET /api/equipamentos/{id}/leituras/ultima` |
 | Detalhe | gráfico de 24 h / 7 d com os limites da faixa, tabela das últimas leituras, relatório em PDF | `GET /api/equipamentos/{id}`, `.../leituras?periodo=`, `.../relatorio?de=&ate=` |
 | Alertas | fila de abertos (atualiza a cada 10 s), resolução com a ação tomada e histórico | `GET /api/alertas?status=`, `PATCH /api/alertas/{id}/resolver` |
 | Cadastro | equipamento com faixa; lote doado e saída do estoque — só `ADMIN` vê essas ações | `POST /api/equipamentos`, `GET`/`POST /api/lotes`, `PATCH /api/lotes/{id}/retirada` |
@@ -347,7 +348,7 @@ está em `mobile/app/src/main/java/br/com/fiap/friosolidario/dominio/Semaforo.kt
 
 ```bash
 cd mobile
-./gradlew testDebugUnitTest      # 120 testes, sem aparelho e sem API
+./gradlew testDebugUnitTest      # 121 testes, sem aparelho e sem API
 ./gradlew assembleDemo            # APK para demonstrar em aparelho: sem modo de depuração, bem mais fluido
 ./gradlew installDebug           # instala no emulador ou no aparelho conectado
 ```
@@ -376,12 +377,12 @@ capturas e o roteiro executado estão em `docs/evidencias/app-mobile.md`.
 | Login com JWT | pronto — `POST /api/auth/login`, BCrypt (gerar e conferir) + token com papel e instituição |
 | Perfis ADMIN e VOLUNTARIO | pronto — escritas do CRUD de instituições e equipamentos exigem `ADMIN` (401 sem token, 403 para `VOLUNTARIO`) |
 | Segurança (JWT, validação, anti-SQLi, anti-XSS) | pronto — todas as rotas com token, isolamento por instituição, limite no login, cabeçalhos de segurança; ver seção "Segurança" |
-| Leituras (ingestão + série) | pronto — `POST /api/leituras` (201) e `GET /api/equipamentos/{id}/leituras?periodo=24h\|7d` |
+| Leituras (ingestão + série) | pronto — `POST /api/leituras` (201), `GET /api/equipamentos/{id}/leituras?periodo=24h\|7d` e `GET .../leituras/ultima` (painel do app) |
 | Regra de faixa → alerta | pronto — 3 leituras seguidas fora da faixa, porta aberta por tempo, severidade por desvio; `GET /api/alertas` e `PATCH /api/alertas/{id}/resolver` |
-| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **60 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
+| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **63 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
 | Lotes doados | pronto — `/api/lotes` (lista, busca, cadastro e retirada), sempre na instituição do token; alimenta os indicadores de kg doados e perda |
-| App mobile | pronto — 5 telas + relatório em PDF integrados à API, em `mobile/`; 120 testes unitários; ver "App mobile (Kevin)" e `docs/evidencias/app-mobile.md` |
+| App mobile | pronto — 5 telas + relatório em PDF integrados à API, em `mobile/`; 121 testes unitários; ver "App mobile (Kevin)" e `docs/evidencias/app-mobile.md` |
 | Ação tomada na resolução do alerta | pronto — corpo opcional em `PATCH /api/alertas/{id}/resolver`, coluna `alerta.acao_tomada`; banco já carregado precisa de `db/migracoes/2026-11-15-alerta-acao-tomada.sql` |
 | IoT (MQTT) | ponte pronta na API (tópico `frio/equipamentos/{id}/leitura`, ver "Ponte MQTT"); falta só o script do sensor publicando, do Roger |
 

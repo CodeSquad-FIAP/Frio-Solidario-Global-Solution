@@ -54,7 +54,7 @@ registrou `FATAL EXCEPTION`.
 
 ## Testes automatizados do app
 
-`cd mobile && ./gradlew testDebugUnitTest` — **120 testes**, sem aparelho e sem API: mapeamento de erro
+`cd mobile && ./gradlew testDebugUnitTest` — **121 testes**, sem aparelho e sem API: mapeamento de erro
 por status e por falha de rede, login, semáforo, escala do gráfico, validação dos formulários, os
 repositórios contra um servidor HTTP de teste (MockWebServer), incluindo token vencido e download de
 PDF interrompido, e os ViewModels de painel, alertas, detalhe e lotes.
@@ -164,7 +164,7 @@ não se repetiu ao sair com "voltar" nem ao reiniciar o app, e a causa não foi 
 | "Últimos 7 dias" gerava relatório de 8 dias | O período agora conta hoje e os 6 dias anteriores, e o de 30 dias conta 30 (3 testes em `RelatorioViewModelTest`). O padrão da própria API, quando chamada sem datas, continua em hoje menos 7 |
 | Falta de `dataExtractionRules` | Regras que excluem tudo de backup e de transferência entre aparelhos, mais `fullBackupContent="false"` |
 | `OldTargetApi` | Não alterado: o alvo continua na API 36, como no design; subir para 37 a quatro dias da entrega mudaria comportamento sem roteiro refeito |
-| Painel baixa a série de 24 h para ler a última leitura | Não alterado: a correção é um endpoint novo na API, que depende do grupo |
+| Painel baixa a série de 24 h para ler a última leitura | Rota nova na API, `GET /api/equipamentos/{id}/leituras/ultima` (200 com a leitura, 204 sem nenhuma; 3 testes xUnit, 63 no total), e o painel e o cabeçalho do detalhe passaram a usá-la. Na API local a resposta tem 151 bytes, contra 21,6 KB da série de 24 h do mesmo equipamento. O texto "Nenhuma leitura nos últimos 7 dias" virou "Nenhuma leitura recebida ainda", porque a rota não tem janela |
 
 Essas correções passaram nos testes e no lint, e o arquivo de rede empacotado no APK demo foi conferido,
 mas **não foram vistas rodando no aparelho**: o celular saiu do adb antes da reinstalação.

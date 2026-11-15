@@ -51,7 +51,7 @@ tratamento de erro de conexão.
 | Sessão | Token, validade, nome, papel e instituição em DataStore; logout limpa tudo |
 | Erros | Um tipo comum (`ErroApp`) e um componente comum (mensagem + "Tentar de novo") nas 5 telas; `detail` do ProblemDetails é a mensagem de 400/409 |
 | Semáforo | Vermelho: temperatura fora de `tempMin..tempMax`. Amarelo: dentro da faixa mas a menos de 10% da largura da faixa (mínimo 0,5 °C, máximo um quarto da faixa) de um limite, ou umidade acima de `umidMax`, ou porta aberta. Verde: o resto. Cinza: sem leitura. "Sem sinal" (acrescentado na revisão): última leitura com mais de 30 minutos, seja qual for a temperatura |
-| Última leitura | A lista de equipamentos da API não traz leitura; o app busca a série de 24h de cada equipamento (7d se vier vazia) e usa a última. Sem mudança na API |
+| Última leitura | A lista de equipamentos da API não traz leitura. O app pede `GET /api/equipamentos/{id}/leituras/ultima` para cada equipamento, uma rota acrescentada à API em 15/11 depois que a revisão apontou que o painel baixava a série de 24h inteira a cada 15 s só para ler o último ponto |
 | Gráfico | Desenhado em Canvas do Compose (linha da série, limites tracejados, pontos fora da faixa em vermelho); sem biblioteca de gráfico |
 | Alertas | Abas "Abertos" e "Histórico"; atualização automática a cada 10 s; resolver abre diálogo com a ação tomada |
 | Ação tomada | Mudança compatível na API: corpo **opcional** `{"acao":"AJUSTOU"\|"TRANSFERIU_LOTE"\|"DESCARTOU"}` em `PATCH /api/alertas/{id}/resolver`, coluna `alerta.acao_tomada` (nula para alertas antigos) e campo `acaoTomada` na resposta. Sem corpo continua funcionando como hoje |
