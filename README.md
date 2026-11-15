@@ -347,7 +347,7 @@ está em `mobile/app/src/main/java/br/com/fiap/friosolidario/dominio/Semaforo.kt
 
 ```bash
 cd mobile
-./gradlew testDebugUnitTest      # 111 testes, sem aparelho e sem API
+./gradlew testDebugUnitTest      # 115 testes, sem aparelho e sem API
 ./gradlew installDebug           # instala no emulador ou no aparelho conectado
 ```
 
@@ -380,7 +380,7 @@ capturas e o roteiro executado estão em `docs/evidencias/app-mobile.md`.
 | Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **60 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
 | Lotes doados | pronto — `/api/lotes` (lista, busca, cadastro e retirada), sempre na instituição do token; alimenta os indicadores de kg doados e perda |
-| App mobile | pronto — 5 telas + relatório em PDF integrados à API, em `mobile/`; 111 testes unitários; ver "App mobile (Kevin)" e `docs/evidencias/app-mobile.md` |
+| App mobile | pronto — 5 telas + relatório em PDF integrados à API, em `mobile/`; 115 testes unitários; ver "App mobile (Kevin)" e `docs/evidencias/app-mobile.md` |
 | Ação tomada na resolução do alerta | pronto — corpo opcional em `PATCH /api/alertas/{id}/resolver`, coluna `alerta.acao_tomada`; banco já carregado precisa de `db/migracoes/2026-11-15-alerta-acao-tomada.sql` |
 | IoT (MQTT) | ponte pronta na API (tópico `frio/equipamentos/{id}/leitura`, ver "Ponte MQTT"); falta só o script do sensor publicando, do Roger |
 
@@ -405,8 +405,7 @@ instituição real foi usada; os dados do projeto são fictícios.
 
 | Item | Situação | Dono |
 |---|---|---|
-| App mobile em celular | o roteiro de `docs/evidencias/app-mobile.md` rodou em um Fire TV Stick (paisagem, Android 9): falta conferir em celular em pé, imprimir o PDF de fato e abri-lo em um leitor | Kevin |
-| App mobile contra PostgreSQL | o roteiro usou a API com o banco em memória do EF Core; a coluna `alerta.acao_tomada` do `schema.sql` e o script de `db/migracoes/` ainda não rodaram em PostgreSQL | Kevin + André |
+| App mobile: impressora física | o roteiro rodou em Fire TV (paisagem) e em celular em pé contra PostgreSQL 18.6, com a prévia de impressão do Android abrindo o PDF (`docs/evidencias/app-mobile.md`); falta só mandar para uma impressora de verdade | Kevin |
 | Notificação fora do app | o alerta aparece com o app aberto (atualização a cada 10 s); não há push com o app fechado | grupo |
 | Sensor MQTT publicando ao vivo | a ponte da API está pronta e medida (mensagem do broker vira leitura e alerta em ~1 s); o script do sensor publicando é que ainda não existe no repositório | Roger |
 | Testes automatizados (xUnit) abrangentes | os casos 5, 6 e o 401 do caso 7 rodam sem banco (regra, serviço e API via TestServer); login com BCrypt, perfis, CRUD restante e relatório seguem verificados por chamada real, com evidência em `docs/` | Arthur |

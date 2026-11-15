@@ -11,16 +11,9 @@ Execução de 15/11/2026, branch `feat/app-mobile`. As capturas estão em `docs/
 | API | A API deste repositório (controllers, JWT, regra de alerta, QuestPDF), em `http://localhost:5199`, com o `DbContext` trocado pelo provedor **em memória** do EF Core. A máquina usada não tinha PostgreSQL nem Docker disponíveis |
 | Dados | Mesmas 3 instituições, 6 usuários e 6 equipamentos do `db/seed.sql`; 7 dias de leituras dentro da faixa gerados na subida; tudo o que sai da faixa entrou por `POST /api/leituras`, passando pela regra de alerta |
 
-O que **não** foi exercitado por esta execução, e precisa de uma passada do grupo antes da entrega:
-
-- **PostgreSQL de verdade.** O `db/schema.sql` com a coluna nova `alerta.acao_tomada` e o
-  `db/migracoes/2026-11-15-alerta-acao-tomada.sql` não foram rodados em banco real; a mudança da API
-  está coberta por 3 testes xUnit via TestServer (60 no total, todos passando).
-- **Celular em pé.** O Fire TV só gira em paisagem. A tela pequena foi simulada em 640 × 360 dp com
-  fonte 30% maior (linhas 10 e 11), mas não em retrato.
-- **Impressão e leitor de PDF.** O aparelho não tem serviço de impressão nem leitor de PDF. O arquivo
-  baixado foi conferido fora dele (é um PDF válido, com o log do período) e a folha de
-  compartilhamento do sistema abriu com o arquivo; imprimir de fato fica para um celular.
+Esta primeira execução deixou três lacunas (PostgreSQL de verdade, celular em pé, impressão do PDF).
+Elas foram fechadas numa segunda execução, descrita em "Segunda execução: PostgreSQL e celular" no
+fim deste documento.
 
 ## Fluxo principal
 
@@ -61,10 +54,10 @@ registrou `FATAL EXCEPTION`.
 
 ## Testes automatizados do app
 
-`cd mobile && ./gradlew testDebugUnitTest` — **111 testes**, sem aparelho e sem API: mapeamento de erro
+`cd mobile && ./gradlew testDebugUnitTest` — **115 testes**, sem aparelho e sem API: mapeamento de erro
 por status e por falha de rede, login, semáforo, escala do gráfico, validação dos formulários, os
 repositórios contra um servidor HTTP de teste (MockWebServer), incluindo token vencido e download de
-PDF interrompido, e os ViewModels de alertas, detalhe e lotes.
+PDF interrompido, e os ViewModels de painel, alertas, detalhe e lotes.
 
 ## Depois da revisão da branch
 
@@ -75,3 +68,43 @@ antiga deixava o cartão verde — agora, com mais de 30 minutos sem leitura, o 
 de novo" da faixa de erro do detalhe não chamava a API; e uma atualização em andamento podia devolver à
 fila, por alguns segundos, um alerta recém-resolvido. As capturas de 1 a 23 são anteriores a essas
 correções; o aviso e o "Sem sinal" foram conferidos de novo no aparelho (`50-` e `51-`).
+
+## Segunda execução: PostgreSQL e celular
+
+Feita em 15/11/2026, depois das correções da revisão, para fechar o que a primeira execução não cobriu.
+
+| Item | Como foi |
+|---|---|
+| Banco | PostgreSQL 18.6 local, em cluster temporário |
+| API | `dotnet run --project src/FrioSolidario.Api`, sem troca de `DbContext`, apontada para esse banco |
+| Aparelho | Galaxy S23 Ultra (Android 17, 1080 × 2316, em pé, tema escuro), por `adb` sem fio com `adb reverse tcp:5199 tcp:5199` |
+
+| # | Cenário | Resultado | Captura |
+|---|---|---|---|
+| 25 | Banco novo: `schema.sql` + `seed.sql` + `verificar.sql` | Os três rodam sem erro com `ON_ERROR_STOP=1` | — |
+| 26 | Banco antigo: `schema.sql` da `main` + `seed.sql`, depois o script de `db/migracoes/` | Aplica sem erro; rodar de novo também (só avisos de "já existe"); `pg_dump -s` do banco migrado é idêntico ao do banco novo | — |
+| 27 | CHECK `ck_alerta_acao_tomada` direto no banco | `UPDATE` com ação fora da lista e com ação em alerta aberto são recusados | — |
+| 28 | `PATCH /api/alertas/{id}/resolver` contra PostgreSQL | `{"acao":"XYZ"}` → 400; `{"acao":"DESCARTOU"}` → 200 e a coluna `acao_tomada` fica `DESCARTOU` | — |
+| 29 | Login, painel e detalhe em pé | Nada cortado; o gráfico e os limites cabem na largura | `60-`, `61-celular-*.png` |
+| 30 | Resolver alerta pelo app com "Transferi o lote" | Linha do banco fica `RESOLVIDO / TRANSFERIU_LOTE`; o histórico mostra a ação | `63-celular-acao-tomada-postgres.png` |
+| 31 | Imprimir o relatório | Abre a impressão do Android com a prévia do PDF (leituras fora da faixa destacadas) e "Salvar como PDF" | `62-celular-imprimir-pdf.png` |
+| 32 | Compartilhar o relatório | A folha de compartilhamento abre com permissão de leitura do arquivo concedida | — |
+| 33 | Erro 400 que o app deixa passar: lote de 0,001 kg | A frase da API ("Peso em kg deve ser maior que zero.") aparece acima do botão, o que foi digitado continua e nada é gravado | `64-celular-400-da-api.png` |
+| 34 | Fonte do sistema em 1,3× | Painel e formulário de equipamento continuam legíveis; no seletor de tipo, "Câmara fria" aparece abreviado | — |
+| 35 | API desligada com o painel aberto | Faixa "Sem conexão" e os cartões com a última leitura conhecida | `65-celular-sem-conexao.png` |
+| 36 | Build só com JDK 17 | `clean testDebugUnitTest assembleDebug` com apenas o JDK 17 visível e sem download de toolchain: passa | — |
+
+Essa execução achou dois defeitos, já corrigidos:
+
+- **Título invisível no tema escuro.** O "Frio Solidário" do login saía preto sobre fundo escuro. O
+  Fire TV usa tema claro, por isso a primeira execução não viu. A raiz do app agora define a cor
+  padrão do texto.
+- **Equipamento fora da faixa virando "tudo dentro da faixa".** Quando a busca da leitura de um
+  equipamento falhava (API caindo no meio da atualização), o cartão passava a "Sem leitura" e o
+  resumo dizia "Tudo dentro da faixa". Agora o painel mantém a última leitura conhecida, mostra a
+  faixa de erro e, sem leitura anterior, diz "sem resposta" em vez de "tudo dentro da faixa"
+  (3 testes novos em `PainelViewModelTest` e 1 em `EquipamentoRepositoryTest`).
+
+Continua sem conferência: enviar o trabalho a uma impressora física e abrir o PDF em um leitor de
+terceiros (a prévia de impressão do Android já desenha o arquivo), e o caso em que a leitura de um
+só equipamento falha foi reproduzido em teste automatizado, não no aparelho.
