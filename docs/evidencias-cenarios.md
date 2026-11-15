@@ -153,7 +153,7 @@ Cenário 2B (`40 s`) em relação ao Cenário 2A (`>= 5 min`).
 - [x] Capturar tela do terminal com o log da ponte (`MQTT: equipamento ... -> leitura ..., 1 alerta(s) aberto(s).`) — **feito**: log colado em §6.1–§6.4.
 - [x] Capturar tela do `GET /api/alertas` (autenticado com Bearer JWT) mostrando o alerta aberto — **feito**: JSON real colado em §6.6.
 - [x] Salvar os prints em `docs/evidencias/prints/`. — **feito**: `app-painel-critico.png`, `app-alertas-temp-alta.png`, `app-detalhe-freezer.png` (e os `caso-*` da frente de API).
-- [x] Vídeo curto de tela do app recebendo o alerta — **feito**: `docs/evidencias/video-demo-app-15-11-2026.mp4` (1 min 17 s), ver §6.7; e o vídeo com o projeto inteiro na mesma gravação (app + sensor + ponte MQTT + banco), `docs/evidencias/video-projeto-completo-15-11-2026.mp4` (29 s), ver §6.8; e o fluxo completo do app, do login ao cadastro de lote e de equipamento (`docs/evidencias/video-app-fluxo-completo-15-11-2026.mp4`, 3 min 15 s), ver §6.9.
+- [x] Vídeo curto de tela do app recebendo o alerta — **feito**: `docs/evidencias/video-demo-app-15-11-2026.mp4` (1 min 17 s), ver §6.7; e o vídeo com o projeto inteiro na mesma gravação (app + sensor + ponte MQTT + banco), `docs/evidencias/video-projeto-completo-15-11-2026.mp4` (29 s), ver §6.8; e o fluxo completo do app, do login ao cadastro de lote e de equipamento (`docs/evidencias/video-app-fluxo-completo-15-11-2026.mp4`, 4 min 26 s), ver §6.9.
 
 ---
 
@@ -366,10 +366,10 @@ o app exibe o mesmo layout de antes.
 
 ### 6.9 O app inteiro, do login ao cadastro: vídeo de fluxo completo
 
-Vídeo `docs/evidencias/video-app-fluxo-completo-15-11-2026.mp4` (3 min 15 s, 1080×1920, 3 MB) — gravação
+Vídeo `docs/evidencias/video-app-fluxo-completo-15-11-2026.mp4` (4 min 26 s, 1080×1920, 3,4 MB) — gravação
 contínua do APK real contra a API real (PostgreSQL + `dotnet run` em `localhost:5199`, emulador com
 `frio.apiUrl=http://10.0.2.2:5199/`). O §6.7 mostra o alerta chegando e o §6.8 a cadeia sensor→banco; este
-percorre **todas as telas e as duas operações de escrita** do sistema.
+percorre **todas as telas, as duas operações de escrita e o relatório em PDF**.
 
 | tempo | tela | o que aparece / o que é feito |
 |---|---|---|
@@ -386,7 +386,10 @@ percorre **todas as telas e as duas operações de escrita** do sistema.
 | 2:00 | Novo lote | formulário preenchido: "Caixas de iogurte naturais", Laticínios, 48 kg, validade no seletor de data |
 | 2:30 | Lotes | lista atualizada com o lote novo (48,0 kg) e estoque **84,0 kg** |
 | 2:40 | Novo equipamento | "Geladeira de sobremesas", tipo Geladeira, faixa 2 a 8 °C, umidade máxima 85 % |
-| 3:00 | Painel | **3 equipamentos**, com "Geladeira de sobremesas · Nenhuma leitura registrada" |
+| 3:10 | Painel | **3 equipamentos**, com "Geladeira de sobremesas · Nenhuma leitura registrada" |
+| 3:30 | Detalhe | o equipamento recém-criado: "Sem leitura · faixa de 2,0 °C a 8,0 °C · umidade até 85 %" |
+| 3:45 | Relatório | no Freezer, "Relatório em PDF" → "Últimos 7 dias" → "Relatório pronto — o PDF foi gerado pela API" |
+| 4:00 | Impressão | visualização do PDF com o cabeçalho, a tabela das 8 leituras (temperatura, umidade, porta, `SENSOR`/`SIMULADO`, situação), os alertas do período e o rodapé |
 
 **O que isso prova:** login com JWT, leitura/escrita reais (o lote e o equipamento criados na gravação estão
 no banco: `select nome, temp_min, temp_max, umid_max from equipamento where nome='Geladeira de sobremesas'`
