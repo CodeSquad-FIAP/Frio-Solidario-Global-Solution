@@ -1,6 +1,7 @@
 # Evidências dos Cenários de IoT — Relatório Técnico
 
-**Responsável:** Roger · **Status:** pronto para exportação ao PDF final da entrega
+**Responsável:** Roger · **Status:** pronto para exportação ao PDF final da entrega · execução real de
+ponta a ponta capturada em §6 (15/11/2026)
 
 > Este documento é a evidência técnica da frente de IoT: separa simulação de hardware físico,
 > especifica os sensores e registra os 4 cenários controlados que provam a regra de alerta. Os logs e
@@ -149,9 +150,9 @@ Cenário 2B (`40 s`) em relação ao Cenário 2A (`>= 5 min`).
 - [ ] **Cenário 1B (anti-falso-positivo temperatura):** gravar que 2 leituras fora + retorno (`--cenario pico-curto --rapido`) geram 0 alertas.
 - [ ] **Cenário 2A (PORTA_ABERTA):** gravar o alerta `PORTA_ABERTA` com 5 min ou mais (`>= 5 min`) de porta aberta (`--cenario porta-aberta --rapido`).
 - [ ] **Cenário 2B (anti-alarme-falso porta):** gravar que **nenhum** alerta aparece após 40 s de porta aberta (`--cenario porta-40s --rapido`).
-- [ ] Capturar tela do terminal com o log da ponte (`MQTT: equipamento ... -> leitura ..., 1 alerta(s) aberto(s).`).
-- [ ] Capturar tela do `GET /api/alertas` (autenticado com Bearer JWT) mostrando o alerta aberto.
-- [ ] Salvar os prints em `docs/evidencias/prints/`.
+- [x] Capturar tela do terminal com o log da ponte (`MQTT: equipamento ... -> leitura ..., 1 alerta(s) aberto(s).`) — **feito**: log colado em §6.1–§6.4.
+- [x] Capturar tela do `GET /api/alertas` (autenticado com Bearer JWT) mostrando o alerta aberto — **feito**: JSON real colado em §6.6.
+- [ ] Salvar os prints em `docs/evidencias/prints/`. (pendente: só falta a captura de imagem/vídeo)
 
 ---
 
@@ -163,3 +164,126 @@ Cenário 2B (`40 s`) em relação ao Cenário 2A (`>= 5 min`).
   é a especificação de produção, não executado na demo.
 - QoS 1 na assinatura: se a API cair entre o `INSERT` e o ack, a mensagem pode ser reentregue e gerar
   leitura duplicada — não há chave de idempotência por mensagem (limite já declarado no README).
+
+---
+
+## 6. Execução real de ponta a ponta — capturada em 15/11/2026
+
+> Log real, não exemplo: PostgreSQL + Mosquitto + API + ponte MQTT rodando, `sensor.py` publicando e o
+> alerta nascendo no banco e na rota `GET /api/alertas`. Substitui os horários ilustrativos das §3.1/§3.2
+> para fins de evidência.
+
+**Ambiente da execução:** Windows 11 · .NET SDK 10.0.401 · PostgreSQL 17 (Docker) · Eclipse Mosquitto 2
+(Docker, `allow_anonymous true`, `localhost:1883`) · Python 3.11.15 + `paho-mqtt` · API em
+`http://localhost:5199` com `Mqtt__Habilitado=true`. Início `18:22:39 -03:00`, fim `18:23:04 -03:00`.
+
+**Subida do ambiente:**
+
+```bash
+docker run -d --name frio-pg -p 5432:5432 -e POSTGRES_PASSWORD=<senha do appsettings> \
+  -e POSTGRES_DB=frio_solidario postgres:17
+docker exec -i frio-pg psql -U postgres -d frio_solidario -f - < db/schema.sql
+docker exec -i frio-pg psql -U postgres -d frio_solidario -f - < db/seed.sql
+docker run -d --name frio-mqtt -p 1883:1883 eclipse-mosquitto:2 sh -c \
+  "printf 'listener 1883\nallow_anonymous true\n' > /mosquitto/config/mosquitto.conf && mosquitto -c /mosquitto/config/mosquitto.conf"
+Mqtt__Habilitado=true ASPNETCORE_URLS=http://localhost:5199 dotnet run --project src/FrioSolidario.Api
+```
+
+O log da API confirmou a assinatura antes do teste:
+`MQTT: assinando frio/equipamentos/+/leitura em localhost:1883 como frio-solidario-api.`
+
+### 6.1 Cenário 1B — `pico-curto` (1A invertido: 1–2 leituras fora não alertam)
+
+```text
+[ pico-curto ] equipamento 4: 2 leituras fora da faixa seguidas de retorno ao normal -> deve gerar 0 alertas
+[mqtt] -> frio/equipamentos/4/leitura {"temperatura": 4.0,  "umidade": 74.0, "portaAberta": false, "registradaEm": "2026-11-15T18:22:39-03:00", "origem": "SIMULADO"}
+  -> leitura 1 (4.0 C, fora da faixa): 0 alertas
+[mqtt] -> frio/equipamentos/4/leitura {"temperatura": 6.0,  "umidade": 74.0, "portaAberta": false, "registradaEm": "2026-11-15T18:22:41-03:00", "origem": "SIMULADO"}
+  -> leitura 2 (6.0 C, fora da faixa): 0 alertas
+[mqtt] -> frio/equipamentos/4/leitura {"temperatura": -20.5,"umidade": 74.0, "portaAberta": false, "registradaEm": "2026-11-15T18:22:43-03:00", "origem": "SIMULADO"}
+  -> leitura 3 (-20.5 C, retorno a faixa (zera contagem)): 0 alertas
+tempo 1a leitura -> verificacao : 5.23s
+alertas novos encontrados       : 0 (esperado: 0)
+```
+
+### 6.2 Cenário 1A — `quebra-compressor` (3 leituras fora → 1 alerta `TEMP_ALTA` `CRITICA`)
+
+```text
+[ quebra-compressor ] equipamento 4 (sequencia 4.0 -> 6.0 -> 7.8 -> 7.9 C)
+  -> leitura 1 (4.0 C): 0 alertas (1a fora da faixa)     registradaEm 2026-11-15T18:22:46-03:00
+  -> leitura 2 (6.0 C): 0 alertas (2a fora da faixa)     registradaEm 2026-11-15T18:22:48-03:00
+  -> leitura 3 (7.8 C, +4.0s): dispara 1 alerta TEMP_ALTA (CRITICA)   registradaEm 2026-11-15T18:22:50-03:00
+  -> leitura 4 (7.9 C): 0 alertas novos (idempotencia — nao duplica)  registradaEm 2026-11-15T18:22:52-03:00
+tempo 1a leitura -> verificacao : 6.02s
+alertas novos encontrados       : 1 (esperado: 1)
+  [alerta #6] tipo=TEMP_ALTA severidade=CRITICA status=ABERTO criadoEm=2026-11-15T21:22:50+00:00
+```
+
+### 6.3 Cenário 2B — `porta-40s` (carga/descarga curta → 0 alertas)
+
+```text
+[ porta-40s ] equipamento 6 (carga/descarga normal: 40s < 5 min)
+  -> leitura 1 (portaAberta: true): 0 alertas                registradaEm 2026-11-15T18:22:35-03:00
+  -> leitura 2 (portaAberta: false, apos 20s < 300s): 0 alertas  registradaEm 2026-11-15T18:22:55-03:00
+tempo 1a leitura -> verificacao : 3.28s
+alertas novos encontrados       : 0 (esperado: 0)
+```
+
+> A duração medida foi **20 s**, não os 40 s nominais: como o `seed.sql` havia sido recarregado segundos
+> antes, a ancoragem descrita em §3.3 fixou a abertura em `1 s` após a última leitura do seed. O que o
+> cenário prova continua válido (abertura curta `< 5 min` → 0 alertas); para reproduzir os 40 s exatos,
+> aguarde 1 min após recarregar o seed.
+
+### 6.4 Cenário 2A — `porta-aberta` (≥ 5 min → 1 alerta `PORTA_ABERTA` `MEDIA`)
+
+```text
+[ porta-aberta ] equipamento 6 (porta aberta ininterrupta >= 5 min)
+  -> leitura 1 (t=0.0 min): 0 alertas                    registradaEm 2026-11-15T18:22:56-03:00
+  -> leitura 2 (t=1.7 min): 0 alertas                    registradaEm 2026-11-15T18:24:36-03:00
+  -> leitura 3 (t=3.3 min): 0 alertas                    registradaEm 2026-11-15T18:26:16-03:00
+  -> leitura 4 (t=5.0 min, >= 5 min): dispara 1 alerta PORTA_ABERTA (MEDIA)  registradaEm 2026-11-15T18:27:56-03:00
+tempo 1a leitura -> verificacao : 6.34s
+alertas novos encontrados       : 1 (esperado: 1)
+  [alerta #7] tipo=PORTA_ABERTA severidade=MEDIA status=ABERTO criadoEm=2026-11-15T21:27:56+00:00
+```
+
+### 6.5 Conferência direta no PostgreSQL (fonte da verdade, não o relatório do script)
+
+```sql
+select id, equipamento_id, tipo, severidade, status, criado_em at time zone 'America/Sao_Paulo' as criado_local
+  from alerta where id > 5 order by id;
+```
+```text
+ id | equipamento_id |     tipo     | severidade | status |    criado_local
+----+----------------+--------------+------------+--------+---------------------
+  6 |              4 | TEMP_ALTA    | CRITICA    | ABERTO | 2026-11-15 18:22:50
+  7 |              6 | PORTA_ABERTA | MEDIA      | ABERTO | 2026-11-15 18:27:56
+```
+
+```sql
+select equipamento_id, count(*) as leituras, string_agg(distinct origem, ',') as origens
+  from leitura where id > 30 group by 1 order by 1;
+```
+```text
+ equipamento_id | leituras | origens
+----------------+----------+---------
+              4 |        7 | SENSOR
+              6 |        6 | SENSOR
+```
+
+**Total:** 13 leituras entraram por MQTT e exatamente **2 alertas** nasceram — nenhum a mais. O payload
+ia com `"origem": "SIMULADO"` e o banco gravou `SENSOR`: é o comportamento declarado na tabela da §1
+(ponte fixa `OrigemLeitura.SENSOR`), não um defeito escondido.
+
+### 6.6 Conferência na rota que o app consome
+
+`GET /api/alertas?status=ABERTO&equipamentoId=4` (JWT de `rafael.nunes@bairrosolidario.example`) devolveu:
+
+```json
+[{"id":6,"equipamentoId":4,"equipamento":"Freezer de congelados","leituraId":36,"tipo":"TEMP_ALTA",
+  "severidade":"CRITICA","status":"ABERTO","criadoEm":"2026-11-15T21:22:50+00:00","resolvidoEm":null}]
+```
+
+`GET /api/equipamentos/4/leituras?periodo=24h` devolveu 12 leituras, as 4 últimas do simulador
+(`4.0 → 6.0 → 7.8 → 7.9 °C`, `21:22:46 → 21:22:52 UTC`). Ou seja: o mesmo JSON que a tela de alertas do
+app já consome.
