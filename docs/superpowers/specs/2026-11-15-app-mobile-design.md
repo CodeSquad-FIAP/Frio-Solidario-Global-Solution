@@ -72,3 +72,21 @@ da API entra com teste xUnit.
 
 Branch `feat/app-mobile`, um commit por alteração relevante, push a cada etapa. Sem merge
 na `main` até o Kevin pedir.
+
+## Direção visual (refeita em 15/11/2026)
+
+Kevin não gostou da primeira interface (Material de fábrica: cartões com borda fina e faixa colorida
+na lateral, pílulas de estado, um azul só) e pediu para refazer seguindo o Impeccable
+(https://impeccable.style). Entre três direções desenhadas para o painel, ele escolheu a
+**linha-sinal** e, depois de ver no aparelho, pediu o app **só em modo claro**.
+
+| Tema | Decisão |
+|---|---|
+| Gesto próprio | A linha inteira é o semáforo: fora da faixa, a linha fica vermelha, o número cresce e a ação vem junto; em atenção, amarela; em ordem, sem cor nenhuma |
+| Estrutura | Listas de borda a borda separadas por fio de 2 dp, sem cartões; nenhum bloco aninhado |
+| Cor | Papel claro e tinta preta. Vermelho e amarelo só para estado; verde só na palavra "Distribuído" e na faixa do gráfico |
+| Modo noturno | Não há: o app fica claro mesmo com o sistema em modo escuro |
+| Letra | Archivo (SIL OFL 1.1) em três cortes: texto, título largo e pesado, número estreito e pesado |
+| Formas | Canto de 4 dp em botão, campo e diálogo; nada de pílula |
+| Navegação | Painel, Alertas e Lotes na barra inferior do Material (trilho lateral a partir de 600 dp); detalhe e cadastros continuam telas de passagem com "voltar"; "Sair" fica no cabeçalho do painel |
+| Estado nunca só pela cor | Toda linha colorida diz o estado em palavras ("Fora da faixa de…", "Em atenção", "Severidade crítica") |

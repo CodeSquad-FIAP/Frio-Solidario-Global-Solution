@@ -54,7 +54,7 @@ registrou `FATAL EXCEPTION`.
 
 ## Testes automatizados do app
 
-`cd mobile && ./gradlew testDebugUnitTest` — **115 testes**, sem aparelho e sem API: mapeamento de erro
+`cd mobile && ./gradlew testDebugUnitTest` — **116 testes**, sem aparelho e sem API: mapeamento de erro
 por status e por falha de rede, login, semáforo, escala do gráfico, validação dos formulários, os
 repositórios contra um servidor HTTP de teste (MockWebServer), incluindo token vencido e download de
 PDF interrompido, e os ViewModels de painel, alertas, detalhe e lotes.
@@ -108,3 +108,27 @@ Essa execução achou dois defeitos, já corrigidos:
 Continua sem conferência: enviar o trabalho a uma impressora física e abrir o PDF em um leitor de
 terceiros (a prévia de impressão do Android já desenha o arquivo), e o caso em que a leitura de um
 só equipamento falha foi reproduzido em teste automatizado, não no aparelho.
+
+## Interface refeita
+
+Depois das duas execuções acima a interface foi redesenhada (ver "Direção visual" em
+`docs/superpowers/specs/2026-11-15-app-mobile-design.md`). **As capturas de `00-` a `65-` mostram a
+interface antiga**; o comportamento que elas documentam não mudou, só a aparência e a navegação
+(Alertas e Lotes saíram do sino e do menu e foram para a barra inferior).
+
+O visual novo foi conferido no Galaxy S23 Ultra, com a API local sobre o banco em memória, em fonte
+normal e em 1,3×, e com o sistema em modo escuro (o app continua claro):
+
+| Tela | Captura |
+|---|---|
+| Login | `70-novo-visual-login.png` |
+| Painel com um equipamento fora da faixa e um em atenção | `71-novo-visual-painel.png` |
+| Alerta aberto | `72-novo-visual-alertas.png` |
+| Detalhe com gráfico | `73-novo-visual-detalhe.png` |
+| Lotes | `74-novo-visual-lotes.png` |
+| Formulário de lote | `75-novo-visual-formulario.png` |
+
+O roteiro completo (cenários 1 a 36) **não foi repetido** com a interface nova: API desligada em
+cada tela, 401, banco vazio, PDF, cadastro e resolução de alerta rodaram só na interface antiga. O
+trilho lateral de tela larga (tablet) não foi visto em aparelho nenhum. Os 116 testes automatizados
+passam, mas eles não cobrem layout.
