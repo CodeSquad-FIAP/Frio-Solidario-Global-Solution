@@ -159,12 +159,12 @@ não se repetiu ao sair com "voltar" nem ao reiniciar o app, e a causa não foi 
 
 | Ressalva | O que foi feito |
 |---|---|
-| HTTP liberado para qualquer host | `network_security_config.xml` passou a liberar texto puro só para `10.0.2.2`, `localhost` e `127.0.0.1`; o build de debug mantém uma versão aberta em `src/debug` para testar pela Wi-Fi. O lint deixou de acusar `InsecureBaseConfiguration` no build demo |
+| HTTP liberado para qualquer host | `network_security_config.xml` passou a liberar texto puro só para `10.0.2.2`, `localhost` e `127.0.0.1`; o build de debug mantém uma versão aberta em `src/debug` para testar pela Wi-Fi. Essa versão de debug só entrou no repositório num commit posterior: o `.gitignore` da raiz ignora `[Dd]ebug/` por causa do .NET e o arquivo tinha ficado de fora, como uma revisão apontou. O lint deixou de acusar `InsecureBaseConfiguration` no build demo |
 | Umidade máxima de 1 a 100 no app e de 0,01 a 100 na API | O app passou a aceitar a faixa da API (teste novo em `ValidacoesTest`) |
-| "Últimos 7 dias" gerava relatório de 8 dias | O período agora conta hoje e os 6 dias anteriores, e o de 30 dias conta 30 (3 testes em `RelatorioViewModelTest`). O padrão da própria API, quando chamada sem datas, continua em hoje menos 7 |
+| "Últimos 7 dias" gerava relatório de 8 dias | O período agora conta hoje e os 6 dias anteriores, e o de 30 dias conta 30 (3 testes em `RelatorioViewModelTest`). O padrão da própria API, quando chamada sem datas, tinha o mesmo desvio e também foi corrigido (`RelatorioService`, com teste xUnit; 64 no total) |
 | Falta de `dataExtractionRules` | Regras que excluem tudo de backup e de transferência entre aparelhos, mais `fullBackupContent="false"` |
 | `OldTargetApi` | Não alterado: o alvo continua na API 36, como no design; subir para 37 a quatro dias da entrega mudaria comportamento sem roteiro refeito |
-| Painel baixa a série de 24 h para ler a última leitura | Rota nova na API, `GET /api/equipamentos/{id}/leituras/ultima` (200 com a leitura, 204 sem nenhuma; 3 testes xUnit, 63 no total), e o painel e o cabeçalho do detalhe passaram a usá-la. Na API local a resposta tem 151 bytes, contra 21,6 KB da série de 24 h do mesmo equipamento. O texto "Nenhuma leitura nos últimos 7 dias" virou "Nenhuma leitura recebida ainda", porque a rota não tem janela |
+| Painel baixa a série de 24 h para ler a última leitura | Rota nova na API, `GET /api/equipamentos/{id}/leituras/ultima` (200 com a leitura, 204 sem nenhuma; 3 testes xUnit), e o painel e o cabeçalho do detalhe passaram a usá-la. Na API local a resposta tem 151 bytes, contra 21,6 KB da série de 24 h do mesmo equipamento. O texto "Nenhuma leitura nos últimos 7 dias" virou "Nenhuma leitura recebida ainda", porque a rota não tem janela |
 
 Essas correções passaram nos testes e no lint, e o arquivo de rede empacotado no APK demo foi conferido,
 mas **não foram vistas rodando no aparelho**: o celular saiu do adb antes da reinstalação.

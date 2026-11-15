@@ -57,7 +57,7 @@ dotnet test --filter Caso=5   # menos de 3 leituras fora da faixa não abrem ale
 dotnet test --filter Caso=6   # 3 leituras seguidas abrem 1 alerta, sem duplicar
 ```
 
-São **63 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
+São **64 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
 severidade por desvio), o fluxo do `POST /api/leituras` com repositórios em memória
 (`LeituraServiceTests`: um alerta aberto por tipo, sem duplicar) e a API por HTTP (`ApiTests`: 401 sem
 token, casos 5 e 6, a rota `/instituicoes/{id}/equipamentos` e o DELETE lógico do equipamento). Os
@@ -379,7 +379,7 @@ capturas e o roteiro executado estão em `docs/evidencias/app-mobile.md`.
 | Segurança (JWT, validação, anti-SQLi, anti-XSS) | pronto — todas as rotas com token, isolamento por instituição, limite no login, cabeçalhos de segurança; ver seção "Segurança" |
 | Leituras (ingestão + série) | pronto — `POST /api/leituras` (201), `GET /api/equipamentos/{id}/leituras?periodo=24h\|7d` e `GET .../leituras/ultima` (painel do app) |
 | Regra de faixa → alerta | pronto — 3 leituras seguidas fora da faixa, porta aberta por tempo, severidade por desvio; `GET /api/alertas` e `PATCH /api/alertas/{id}/resolver` |
-| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **63 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
+| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **64 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
 | Lotes doados | pronto — `/api/lotes` (lista, busca, cadastro e retirada), sempre na instituição do token; alimenta os indicadores de kg doados e perda |
 | App mobile | pronto — 5 telas + relatório em PDF integrados à API, em `mobile/`; 121 testes unitários; ver "App mobile (Kevin)" e `docs/evidencias/app-mobile.md` |
