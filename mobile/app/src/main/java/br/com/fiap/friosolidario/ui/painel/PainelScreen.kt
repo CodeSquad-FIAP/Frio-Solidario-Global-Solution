@@ -188,8 +188,8 @@ private fun resumo(itens: List<EquipamentoNoPainel>): String {
 }
 
 /**
- * Um equipamento por linha. Fora da faixa, a linha inteira fica vermelha, o número cresce e a ação
- * vem junto; em atenção, amarela; em ordem, sem cor nenhuma.
+ * Um equipamento por linha. Fora da faixa, a linha inteira fica vermelha e a ação vem junto; em
+ * atenção, amarela; em ordem, verde claro.
  */
 @Composable
 private fun LinhaDoEquipamento(item: EquipamentoNoPainel, agora: Instant, aoAbrir: () -> Unit, aoAbrirAlertas: (() -> Unit)?) {
@@ -232,7 +232,7 @@ private fun LinhaDoEquipamento(item: EquipamentoNoPainel, agora: Instant, aoAbri
                 style = TextStyle(
                     fontFamily = FonteDeNumeros,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = if (critico) 44.sp else 30.sp,
+                    fontSize = if (critico) 36.sp else 30.sp,
                 ),
                 color = if (item.semaforo == Semaforo.SEM_SINAL || leitura == null) corSuave() else LocalContentColor.current,
                 maxLines = 1,
@@ -242,8 +242,8 @@ private fun LinhaDoEquipamento(item: EquipamentoNoPainel, agora: Instant, aoAbri
             )
         }
         if (critico && aoAbrirAlertas != null) {
-            Spacer(Modifier.height(12.dp))
-            BotaoDaLinha("Ver o alerta e registrar o que foi feito", cores, aoAbrirAlertas, Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+            BotaoDaLinha("Ver o alerta", cores, aoAbrirAlertas)
         }
     }
 }

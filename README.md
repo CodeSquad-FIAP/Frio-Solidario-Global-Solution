@@ -346,7 +346,9 @@ do relatório, todas lendo e gravando pela API — não há dado fixo no app:
 
 O semáforo usa a faixa **do próprio equipamento**: vermelho com a temperatura fora de `tempMin`..`tempMax`;
 amarelo dentro da faixa mas encostando em um limite (10% da largura da faixa, entre 0,5 °C e um quarto
-dela), com umidade acima de `umidMax` ou com a porta aberta; verde no resto; cinza sem leitura. Se a
+dela), com umidade acima de `umidMax` ou com a porta aberta; verde no resto; cinza sem leitura. No
+painel a cor não fica só no texto: cada equipamento é uma linha pintada com o estado — cheia de
+vermelho fora da faixa, amarela em atenção, verde clara em ordem. Se a
 última leitura tem mais de 30 minutos o cartão vira "Sem sinal", seja qual for a temperatura dela: sensor
 parado não prova que o equipamento está frio, e o painel deixa de dizer "tudo dentro da faixa". A regra
 está em `mobile/app/src/main/java/br/com/fiap/friosolidario/dominio/Semaforo.kt`.

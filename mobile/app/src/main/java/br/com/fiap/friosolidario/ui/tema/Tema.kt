@@ -20,7 +20,8 @@ import androidx.compose.ui.unit.sp
 import br.com.fiap.friosolidario.R
 
 // Direção "linha-sinal": papel claro, tinta preta, fios grossos e quase nenhuma decoração. A cor
-// fica reservada para o estado: a linha do que está fora da faixa vira o próprio semáforo.
+// fica reservada para o estado: a linha do equipamento vira o próprio semáforo, verde claro quando
+// está em ordem e cheia quando pede ação.
 
 private val Tinta = Color(0xFF0C0C0C)
 private val Papel = Color(0xFFFBFBF8)
@@ -114,15 +115,16 @@ data class CoresDeEstado(
 private val SobreAmarelo = Color(0xFF1C1500)
 
 private val EstadosClaro = CoresDeEstado(
-    // O que está em ordem fica quieto: sem preenchimento, só a tinta da tela.
-    ok = CorDeEstado(Color(0xFF17703A), Color.Transparent, Tinta, Color(0xFF55554F)),
+    // O que está em ordem também se lê de relance: verde claro na linha, sem competir com o
+    // vermelho e o amarelo no topo da ordem.
+    ok = CorDeEstado(Color(0xFF17703A), Color(0xFFE3F1E8), Tinta, Color(0xFF3B6B4E)),
     atencao = CorDeEstado(Color(0xFF7A5800), Amarelo, SobreAmarelo, SobreAmarelo),
     critico = CorDeEstado(Vermelho, Vermelho, Color.White, Color.White),
     neutro = CorDeEstado(Color(0xFF55554F), Color.Transparent, Tinta, Color(0xFF55554F)),
 )
 
 private val EstadosEscuro = CoresDeEstado(
-    ok = CorDeEstado(Color(0xFF5BD07A), Color.Transparent, TintaClara, Color(0xFFB0B0A8)),
+    ok = CorDeEstado(Color(0xFF5BD07A), Color(0xFF172A1E), TintaClara, Color(0xFF9DBEAA)),
     atencao = CorDeEstado(Amarelo, Amarelo, SobreAmarelo, SobreAmarelo),
     critico = CorDeEstado(Color(0xFFFF7566), Vermelho, Color.White, Color.White),
     neutro = CorDeEstado(Color(0xFFB0B0A8), Color.Transparent, TintaClara, Color(0xFFB0B0A8)),
