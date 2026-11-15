@@ -3,6 +3,7 @@ using FrioSolidario.Application.Services;
 using FrioSolidario.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace FrioSolidario.Api.Controllers;
 
@@ -27,17 +28,25 @@ public sealed class AlertasController(IAlertaService alertas) : ControllerBase
         CancellationToken cancellationToken)
         => Ok(await alertas.ListarAsync(status, equipamentoId, User.InstituicaoObrigatoria(), cancellationToken));
 
-    /// <summary>Marca o alerta como resolvido, gravando quem resolveu e quando.</summary>
+    /// <summary>
+    /// Marca o alerta como resolvido, gravando quem resolveu, quando e (se informada) a acao tomada.
+    /// O corpo e opcional: <c>{"acao":"AJUSTOU"}</c>, <c>TRANSFERIU_LOTE</c> ou <c>DESCARTOU</c>.
+    /// </summary>
+    /// <response code="400">Acao fora do vocabulario.</response>
     /// <response code="401">Token sem identificacao de usuario.</response>
     /// <response code="403">Alerta de equipamento de outra instituicao.</response>
     /// <response code="404">Alerta nao encontrado.</response>
     /// <response code="409">Alerta ja resolvido.</response>
     [HttpPatch("{id:long}/resolver")]
     [ProducesResponseType(typeof(AlertaResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<AlertaResponse>> Resolver(long id, CancellationToken cancellationToken)
+    public async Task<ActionResult<AlertaResponse>> Resolver(
+        long id,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] ResolverAlertaRequest? request,
+        CancellationToken cancellationToken)
     {
         var usuarioId = User.UsuarioId();
         if (usuarioId is null)
@@ -45,6 +54,7 @@ public sealed class AlertasController(IAlertaService alertas) : ControllerBase
             return Unauthorized();
         }
 
-        return Ok(await alertas.ResolverAsync(id, usuarioId.Value, User.InstituicaoObrigatoria(), cancellationToken));
+        return Ok(await alertas.ResolverAsync(
+            id, usuarioId.Value, User.InstituicaoObrigatoria(), request?.Acao, cancellationToken));
     }
 }

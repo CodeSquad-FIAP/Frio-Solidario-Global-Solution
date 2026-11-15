@@ -62,6 +62,7 @@ erDiagram
         TIMESTAMPTZ criado_em
         TIMESTAMPTZ resolvido_em
         BIGINT resolvido_por_id FK
+        VARCHAR acao_tomada
     }
 
     lote {
@@ -109,6 +110,7 @@ erDiagram
 - Cada leitura pertence a um equipamento.
 - Cada alerta referencia uma leitura do mesmo equipamento.
 - Um alerta resolvido possui data e usuário responsável.
+- A ação tomada é opcional e só existe em alerta resolvido.
 - As chaves estrangeiras garantem a integridade dos relacionamentos.
 
 ## Regras de domínio
@@ -119,6 +121,7 @@ erDiagram
 - **Origem da leitura:** SENSOR ou SIMULADO.
 - **Tipo do alerta:** TEMP_ALTA, TEMP_BAIXA, PORTA_ABERTA ou UMIDADE.
 - **Status do alerta:** ABERTO ou RESOLVIDO.
+- **Ação tomada na resolução (opcional):** AJUSTOU, TRANSFERIU_LOTE ou DESCARTOU.
 - **Status do lote:** DISPONIVEL, DISTRIBUIDO ou PERDIDO.
 
 Coerência entre status e datas:

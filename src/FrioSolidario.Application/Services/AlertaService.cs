@@ -43,6 +43,7 @@ public sealed class AlertaService(
         long id,
         long resolvidoPorId,
         long? instituicaoDoToken = null,
+        AcaoTomada? acao = null,
         CancellationToken cancellationToken = default)
     {
         var alerta = await alertas.ObterAsync(id, cancellationToken)
@@ -68,6 +69,7 @@ public sealed class AlertaService(
         alerta.Status = StatusAlerta.RESOLVIDO;
         alerta.ResolvidoEm = agora < alerta.CriadoEm ? alerta.CriadoEm : agora;
         alerta.ResolvidoPorId = resolvidoPorId;
+        alerta.AcaoTomada = acao;
 
         await alertas.AtualizarAsync(alerta, cancellationToken);
 

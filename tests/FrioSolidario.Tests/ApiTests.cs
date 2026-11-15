@@ -315,4 +315,70 @@ public class ApiTests
             "/api/equipamentos?ativo=false", JsonDaApi.Opcoes);
         Assert.Single(inativos!);
     }
+
+    /// <summary>Abre um alerta pela regra (3 leituras acima da faixa da câmara) e devolve o id dele.</summary>
+    private static async Task<long> AbrirAlertaAsync(HttpClient cliente)
+    {
+        LeituraRegistradaResponse? corpo = null;
+        for (var i = 0; i < 3; i++)
+        {
+            var resposta = await cliente.PostAsJsonAsync("/api/leituras", Leitura(1, 7.8m, i), JsonDaApi.Opcoes);
+            corpo = await resposta.Content.ReadFromJsonAsync<LeituraRegistradaResponse>(JsonDaApi.Opcoes);
+        }
+
+        return Assert.Single(corpo!.AlertasAbertos).Id;
+    }
+
+    /// <summary>A ação escolhida no app fica gravada no alerta e aparece no histórico de resolvidos.</summary>
+    [Fact]
+    public async Task Resolver_ComAcao_GravaEDevolveAAcaoTomada()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente();
+        var id = await AbrirAlertaAsync(cliente);
+
+        var resposta = await cliente.PatchAsJsonAsync(
+            $"/api/alertas/{id}/resolver", new ResolverAlertaRequest(AcaoTomada.TRANSFERIU_LOTE), JsonDaApi.Opcoes);
+
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+        var resolvido = await resposta.Content.ReadFromJsonAsync<AlertaResponse>(JsonDaApi.Opcoes);
+        Assert.Equal(StatusAlerta.RESOLVIDO, resolvido!.Status);
+        Assert.Equal(AcaoTomada.TRANSFERIU_LOTE, resolvido.AcaoTomada);
+
+        var historico = await cliente.GetFromJsonAsync<List<AlertaResponse>>(
+            "/api/alertas?status=RESOLVIDO", JsonDaApi.Opcoes);
+        Assert.Equal(AcaoTomada.TRANSFERIU_LOTE, Assert.Single(historico!).AcaoTomada);
+    }
+
+    /// <summary>Compatibilidade: quem ainda chama o PATCH sem corpo continua resolvendo, sem ação.</summary>
+    [Fact]
+    public async Task Resolver_SemCorpo_ContinuaFuncionando()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente();
+        var id = await AbrirAlertaAsync(cliente);
+
+        var resposta = await cliente.PatchAsync($"/api/alertas/{id}/resolver", content: null);
+
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+        var resolvido = await resposta.Content.ReadFromJsonAsync<AlertaResponse>(JsonDaApi.Opcoes);
+        Assert.Equal(StatusAlerta.RESOLVIDO, resolvido!.Status);
+        Assert.Null(resolvido.AcaoTomada);
+    }
+
+    /// <summary>Ação fora do vocabulário é 400 e o alerta continua aberto.</summary>
+    [Fact]
+    public async Task Resolver_ComAcaoForaDoVocabulario_Devolve400()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente();
+        var id = await AbrirAlertaAsync(cliente);
+
+        var resposta = await cliente.PatchAsync(
+            $"/api/alertas/{id}/resolver",
+            new StringContent("{\"acao\":\"QUEIMOU\"}", System.Text.Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
+        Assert.Equal(StatusAlerta.ABERTO, Assert.Single(app.Alertas.Itens).Status);
+    }
 }

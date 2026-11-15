@@ -56,7 +56,7 @@ dotnet test --filter Caso=5   # menos de 3 leituras fora da faixa não abrem ale
 dotnet test --filter Caso=6   # 3 leituras seguidas abrem 1 alerta, sem duplicar
 ```
 
-São **57 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
+São **60 testes** em `tests/FrioSolidario.Tests`: a regra pura (`RegraDeAlertaTests`: limites da faixa,
 severidade por desvio), o fluxo do `POST /api/leituras` com repositórios em memória
 (`LeituraServiceTests`: um alerta aberto por tipo, sem duplicar) e a API por HTTP (`ApiTests`: 401 sem
 token, casos 5 e 6, a rota `/instituicoes/{id}/equipamentos` e o DELETE lógico do equipamento). Os
@@ -137,7 +137,7 @@ equipamento no cadastro muda o comportamento sem tocar em código.
 | POST | `/api/leituras` | registra leitura do sensor e devolve os alertas que ela abriu |
 | GET | `/api/equipamentos/{id}/leituras?periodo=24h\|7d` | série do gráfico (24h por padrão) |
 | GET | `/api/alertas?status=ABERTO&equipamentoId=` | fila de alertas da instituição do token, mais grave primeiro |
-| PATCH | `/api/alertas/{id}/resolver` | resolve o alerta com o usuário do token (só da própria instituição) |
+| PATCH | `/api/alertas/{id}/resolver` | resolve o alerta com o usuário do token (só da própria instituição); corpo opcional `{"acao":"AJUSTOU"}` grava a ação tomada |
 | GET | `/api/lotes?status=` | lotes doados da instituição do token, por validade (o que vence primeiro) |
 | GET | `/api/lotes/{id}` | busca um lote (403 se for de outra instituição) |
 | POST | `/api/lotes` | cadastra lote doado — `ADMIN`; nasce `DISPONIVEL` (descrição, categoria, kg, validade) |
@@ -202,8 +202,12 @@ Ordem que o app segue, com o corpo real de cada resposta (medido rodando a API):
   "criadoEm":"2026-11-10T23:30:00+00:00","resolvidoEm":null,"resolvidoPorId":null}]
 ```
 
-5. `PATCH /api/alertas/{id}/resolver` (sem corpo) → devolve o alerta com `status: "RESOLVIDO"`,
-   `resolvidoEm` e `resolvidoPorId`. Repetir a chamada devolve 409.
+5. `PATCH /api/alertas/{id}/resolver` → devolve o alerta com `status: "RESOLVIDO"`, `resolvidoEm` e
+   `resolvidoPorId`. O corpo é **opcional**: `{"acao":"AJUSTOU"}`, `"TRANSFERIU_LOTE"` ou `"DESCARTOU"`
+   grava o que o voluntário fez e volta em `acaoTomada` (também no `GET /api/alertas?status=RESOLVIDO`,
+   que é o histórico do app); sem corpo, `acaoTomada` fica `null`. Ação fora do vocabulário devolve 400
+   e repetir a chamada devolve 409. Banco já carregado precisa de
+   `db/migracoes/2026-11-15-alerta-acao-tomada.sql`.
 6. `GET /api/equipamentos/{id}/relatorio?de=2026-11-01&ate=2026-11-10` → **corpo é o PDF**
    (`Content-Type: application/pdf`, nome do arquivo em `Content-Disposition`). Salve os bytes em cache e
    abra com a folha de compartilhamento/impressão do Android. `de`/`ate` são opcionais (padrão: últimos
@@ -333,7 +337,7 @@ Com `localhost:5199` a API só responde na própria máquina — é a causa nº 
 | Segurança (JWT, validação, anti-SQLi, anti-XSS) | pronto — todas as rotas com token, isolamento por instituição, limite no login, cabeçalhos de segurança; ver seção "Segurança" |
 | Leituras (ingestão + série) | pronto — `POST /api/leituras` (201) e `GET /api/equipamentos/{id}/leituras?periodo=24h\|7d` |
 | Regra de faixa → alerta | pronto — 3 leituras seguidas fora da faixa, porta aberta por tempo, severidade por desvio; `GET /api/alertas` e `PATCH /api/alertas/{id}/resolver` |
-| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **57 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
+| Testes automatizados (xUnit) | pronto — casos 5, 6 e 7 do plano: **60 testes** em `tests/FrioSolidario.Tests`, incluindo a API por HTTP (`WebApplicationFactory`/TestServer) |
 | Relatório de logs em PDF | pronto — `GET /api/equipamentos/{id}/relatorio?de=&ate=` (QuestPDF) |
 | Lotes doados | pronto — `/api/lotes` (lista, busca, cadastro e retirada), sempre na instituição do token; alimenta os indicadores de kg doados e perda |
 | App mobile | Kevin |

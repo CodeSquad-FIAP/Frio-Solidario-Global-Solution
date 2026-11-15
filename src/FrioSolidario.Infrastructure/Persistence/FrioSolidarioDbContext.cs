@@ -91,6 +91,7 @@ public sealed class FrioSolidarioDbContext(DbContextOptions<FrioSolidarioDbConte
             map.Property(a => a.CriadoEm).HasColumnName("criado_em").IsRequired();
             map.Property(a => a.ResolvidoEm).HasColumnName("resolvido_em");
             map.Property(a => a.ResolvidoPorId).HasColumnName("resolvido_por_id");
+            map.Property(a => a.AcaoTomada).HasColumnName("acao_tomada").HasMaxLength(16).HasConversion<string>();
         });
 
         modelBuilder.Entity<Lote>(map =>
