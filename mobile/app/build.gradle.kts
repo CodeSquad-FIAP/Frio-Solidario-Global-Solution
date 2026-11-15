@@ -23,6 +23,13 @@ android {
         release {
             isMinifyEnabled = false
         }
+        // Para demonstrar em aparelho: sem o modo de depuração (que deixa o Compose bem mais lento),
+        // assinado com a chave de debug para instalar direto por adb. Não é o build de publicação.
+        create("demo") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

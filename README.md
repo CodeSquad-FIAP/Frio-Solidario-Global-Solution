@@ -348,6 +348,7 @@ está em `mobile/app/src/main/java/br/com/fiap/friosolidario/dominio/Semaforo.kt
 ```bash
 cd mobile
 ./gradlew testDebugUnitTest      # 116 testes, sem aparelho e sem API
+./gradlew assembleDemo            # APK para demonstrar em aparelho: sem modo de depuração, bem mais fluido
 ./gradlew installDebug           # instala no emulador ou no aparelho conectado
 ```
 

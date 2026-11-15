@@ -1,5 +1,8 @@
 package br.com.fiap.friosolidario.ui
 
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -68,6 +71,8 @@ private enum class Area(val rota: String, val rotulo: String, val icone: ImageVe
     ALERTAS(Rotas.ALERTAS, "Alertas", Icons.Filled.Notifications),
     LOTES(Rotas.LOTES, "Lotes", Icons.Filled.Inventory2),
 }
+
+private const val TROCA_DE_TELA_MS = 120
 
 /** A partir desta largura (tablet, TV) a navegação vai para a lateral. */
 private val LARGURA_DO_TRILHO = 600.dp
@@ -163,7 +168,16 @@ private fun NavHostController.irPara(area: Area) {
 
 @Composable
 private fun Telas(nav: NavHostController, sessao: Sessao, alertasAbertos: Int?, aoAtualizarContador: () -> Unit) {
-    NavHost(navController = nav, startDestination = Rotas.PAINEL) {
+    NavHost(
+        navController = nav,
+        startDestination = Rotas.PAINEL,
+        // O padrão do Navigation é um esmaecer de 700 ms em cada troca, que deixa o app com cara de
+        // lento. Aqui a tela nova entra em 120 ms e a antiga sai na hora.
+        enterTransition = { fadeIn(tween(TROCA_DE_TELA_MS)) },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { fadeIn(tween(TROCA_DE_TELA_MS)) },
+        popExitTransition = { ExitTransition.None },
+    ) {
         composable(Rotas.PAINEL) {
             PainelScreen(
                 sessao = sessao,
