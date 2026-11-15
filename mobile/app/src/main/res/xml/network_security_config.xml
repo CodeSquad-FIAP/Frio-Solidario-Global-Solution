@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A demo roda em HTTP na rede local (README, "O que ainda não roda"). Em produção a API fica
+     atrás de TLS e este arquivo volta a proibir texto puro. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
