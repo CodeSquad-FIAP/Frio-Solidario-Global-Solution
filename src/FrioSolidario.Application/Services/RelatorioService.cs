@@ -42,7 +42,8 @@ public sealed class RelatorioService(
 
         // O "hoje" e o do fuso do projeto: o relatorio e pedido e lido em Brasilia, nao em UTC.
         var hoje = DateOnly.FromDateTime(FusoDoProjeto.Local(DateTimeOffset.Now).DateTime);
-        var inicio = de ?? hoje.AddDays(-DiasPadrao);
+        // O fim e inclusivo, entao "7 dias" e hoje e os 6 anteriores; voltar 7 inteiros daria 8 dias.
+        var inicio = de ?? hoje.AddDays(-(DiasPadrao - 1));
         var fim = ate ?? hoje;
 
         if (inicio > fim)

@@ -297,6 +297,28 @@ public class ApiTests
         Assert.Equal(HttpStatusCode.NotFound, inexistente.StatusCode);
     }
 
+    /// <summary>
+    /// "7 dias por padrão" (README e plano de testes) com o fim inclusivo: hoje e os 6 dias anteriores.
+    /// O período sai no nome do arquivo, então o teste não depende do relógio.
+    /// </summary>
+    [Fact]
+    public async Task Relatorio_SemDatas_CobreSeteDiasContandoHoje()
+    {
+        using var app = new ApiDeTeste();
+        var cliente = app.Cliente(instituicaoId: 2);
+
+        var resposta = await cliente.GetAsync("/api/equipamentos/4/relatorio");
+
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+        var nome = resposta.Content.Headers.ContentDisposition?.FileName?.Trim('"');
+        Assert.NotNull(nome);
+
+        var partes = Path.GetFileNameWithoutExtension(nome!).Split('-');
+        var inicio = DateOnly.ParseExact(partes[^2], "yyyyMMdd");
+        var fim = DateOnly.ParseExact(partes[^1], "yyyyMMdd");
+        Assert.Equal(7, fim.DayNumber - inicio.DayNumber + 1);
+    }
+
     /// <summary>Lote nasce DISPONIVEL na instituicao do token; a retirada o tira do estoque uma vez so.</summary>
     [Fact]
     public async Task Lotes_CadastraDisponivel_RegistraRetiradaENaoRepete()
