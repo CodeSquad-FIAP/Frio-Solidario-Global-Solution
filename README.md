@@ -123,7 +123,7 @@ Onde está cada documento, para quem for conferir a entrega:
 | `docs/evidencias/banco-schema-do-zero.md` | criação do banco do zero a partir de `db/schema.sql` e `db/seed.sql` |
 | `docs/validacao.md` | validação de campo e referências da frente IoT (Roger), com as fontes usadas |
 | `docs/app-mobile-design.md` | design do app aprovado antes da implementação (telas, navegação e direção visual) |
-| `docs/roteiro-pitch.md` | roteiro do vídeo de pitch — **fora do escopo desta entrega**, fica para o card do pitch |
+| `docs/roteiro-pitch.md` | roteiro do vídeo pitch — o vídeo publicado está no topo deste README |
 
 ## Login (demo)
 
