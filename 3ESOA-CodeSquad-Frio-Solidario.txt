@@ -1,0 +1,16 @@
+GLOBAL SOLUTION 2026/2 — FIAP — TURMA 3ESOA
+Projeto: Frio Solidário — monitoramento da cadeia de frio em bancos de alimentos
+
+GRUPO: CodeSquad
+
+INTEGRANTES
+- André Luiz — RM 554952
+- Arthur Corrêa — RM 97781
+- Kevin Benevides — RM 557898
+- Roger Viana — RM 97540
+- Yasmin Kimura — RM 557413
+
+VÍDEO PITCH (link público, 2min36s)
+https://www.youtube.com/watch?v=DkYKofjSVjg
+
+Repositório: https://github.com/CodeSquad-FIAP/Frio-Solidario-Global-Solution

@@ -6,6 +6,11 @@ avisa o voluntário antes de o lote ser perdido.
 
 Projeto em construção — Global Solution 2026/2, entrega em 19/11/2026.
 
+## Vídeo pitch (link público)
+
+**https://www.youtube.com/watch?v=DkYKofjSVjg** — 2min36s, público (testado em aba anônima).
+Roteiro do que aparece no vídeo: `docs/roteiro-pitch.md`.
+
 ## Estrutura (camadas separadas)
 
 ```
